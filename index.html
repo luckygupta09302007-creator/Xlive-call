@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Video Call & Media Share</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      text-align: center;
+      margin: 0;
+      padding: 15px;
+    }
+    h2 { margin-bottom: 10px; }
+    .video-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+    video {
+      width: 100%;
+      max-width: 420px;
+      height: 300px;
+      background: #000;
+      border-radius: 8px;
+      border: 2px solid #333;
+      object-fit: cover;
+    }
+    .controls, .share-box, .media-section {
+      margin-top: 15px;
+    }
+    button {
+      padding: 10px 18px;
+      font-size: 15px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+    }
+    button:disabled { background-color: #555; cursor: not-allowed; }
+    input[type="text"] {
+      padding: 8px 12px;
+      width: 280px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #222;
+      color: #fff;
+    }
+    #mediaGallery {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .media-item {
+      max-width: 350px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 5px;
+      background: #1e1e1e;
+    }
+    .media-item img, .media-item video {
+      width: 100%;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Live Video Call & Snapshot Share</h2>
+
+  <div class="share-box">
+    <span id="status">Connecting to server...</span><br><br>
+    <label>Apna Invite Link Copy Karein:</label><br>
+    <input type="text" id="shareLink" readonly>
+    <button onclick="copyLink()">Link Copy Karein</button>
+  </div>
+
+  <div class="video-container">
+    <div>
+      <h4>Aapka Video (Local)</h4>
+      <video id="localVideo" autoplay muted playsinline></video>
+    </div>
+    <div>
+      <h4>Saamne Wale Ka Video (Remote)</h4>
+      <video id="remoteVideo" autoplay playsinline></video>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btnCapturePhoto" onclick="captureAndSendPhoto()" disabled>Photo Kheenche Aur Bhejein</button>
+    <button id="btnRecordVideo" onclick="toggleRecordVideo()" disabled>Video Record Karein (Start)</button>
+  </div>
+
+  <div class="media-section">
+    <h3>Shared Photos & Videos</h3>
+    <div id="mediaGallery"></div>
+  </div>
+
+  <canvas id="snapshotCanvas" style="display:none;"></canvas>
+
+  <script>
+    let localStream = null;
+    let peer = null;
+    let currentCall = null;
+    let dataConnection = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetPeerId = urlParams.get('room');
+
+    async function init() {
+      try {
+        // Camera aur Microphone ki permission maangna
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('localVideo').srcObject = localStream;
+
+        // PeerJS connect karna
+        peer = new Peer();
+
+        peer.on('open', (id) => {
+          document.getElementById('status').innerText = "Aap online hain!";
+          const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${id}`;
+          document.getElementById('shareLink').value = inviteUrl;
+
+          // Agar link me already target room ID hai, toh call start karein
+          if (targetPeerId) {
+            connectToUser(targetPeerId);
+          }
+        });
+
+        // Incoming Call receive karna
+        peer.on('call', (call) => {
+          call.answer(localStream);
+          setupCallHandlers(call);
+        });
+
+        // Incoming Data Connection (Media/Photos receive karne ke liye)
+        peer.on('connection', (conn) => {
+          setupDataConnection(conn);
+        });
+
+      } catch (err) {
+        document.getElementById('status').innerText = "Camera/Mic permission nahi mili ya error aayi: " + err.message;
+      }
+    }
+
+    function connectToUser(remoteId) {
+      document.getElementById('status').innerText = "Call connect ho rahi hai...";
+      
+      // Data channel setup
+      const conn = peer.connect(remoteId);
+      setupDataConnection(conn);
+
+      // Video Call setup
+      const call = peer.call(remoteId, localStream);
+      setupCallHandlers(call);
+    }
+
+    function setupCallHandlers(call) {
+      currentCall = call;
+      call.on('stream', (remoteStream) => {
+        document.getElementById('remoteVideo').srcObject = remoteStream;
+        document.getElementById('status').innerText = "Call Connected!";
+        document.getElementById('btnCapturePhoto').disabled = false;
+        document.getElementById('btnRecordVideo').disabled = false;
+      });
+      call.on('close', () => {
+        document.getElementById('status').innerText = "Call disconnected.";
+      });
+    }
+
+    function setupDataConnection(conn) {
+      dataConnection = conn;
+      dataConnection.on('data', (data) => {
+        displayReceivedMedia(data);
+      });
+    }
+
+    // Photo capture karke bhejna
+    function captureAndSendPhoto() {
+      const video = document.getElementById('localVideo');
+      const canvas = document.getElementById('snapshotCanvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+      // Data send karna
+      if (dataConnection && dataConnection.open) {
+        dataConnection.send({ type: 'image', data: photoDataUrl });
+        displayMedia(photoDataUrl, 'image', 'Aapne bheja');
+      }
+    }
+
+    // Short Video clip record karke bhejna
+    function toggleRecordVideo() {
+      const btn = document.getElementById('btnRecordVideo');
+
+      if (!isRecording) {
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onloadend = () => {
+            const videoDataUrl = reader.result;
+            if (dataConnection && dataConnection.open) {
+              dataConnection.send({ type: 'video', data: videoDataUrl });
+              displayMedia(videoDataUrl, 'video', 'Aapne bheja');
+            }
+          };
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        btn.innerText = "Recording Stop Karein & Bhejein";
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        btn.innerText = "Video Record Karein (Start)";
+      }
+    }
+
+    function displayReceivedMedia(payload) {
+      displayMedia(payload.data, payload.type, 'Saamne wale se aaya');
+    }
+
+    function displayMedia(dataUrl, type, label) {
+      const gallery = document.getElementById('mediaGallery');
+      const container = document.createElement('div');
+      container.className = 'media-item';
+
+      const title = document.createElement('p');
+      title.innerText = label;
+      container.appendChild(title);
+
+      if (type === 'image') {
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        container.appendChild(img);
+      } else if (type === 'video') {
+        const vid = document.createElement('video');
+        vid.src = dataUrl;
+        vid.controls = true;
+        container.appendChild(vid);
+      }
+
+      gallery.prepend(container);
+    }
+
+    function copyLink() {
+      const input = document.getElementById('shareLink');
+      input.select();
+      navigator.clipboard.writeText(input.value);
+      alert("Link copy ho gaya! Ab aap ise share kar sakte hain.");
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
