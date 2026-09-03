@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -43,7 +42,6 @@
   <style>
     :root { color-scheme: dark; }
     html, body { height: 100%; background: #0b0f19; overflow: hidden; }
-    /* Glassmorphism helpers */
     .glass {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.14);
@@ -59,28 +57,11 @@
     }
     .no-select { user-select: none; -webkit-user-select: none; }
     .tap { -webkit-tap-highlight-color: transparent; }
-    /* Shutter flash */
-    @keyframes shutter {
-      0% { opacity: 0; }
-      10% { opacity: 0.9; }
-      100% { opacity: 0; }
-    }
-    .shutter {
-      animation: shutter 300ms ease-out;
-    }
-    /* Recording pulse */
-    @keyframes pulseRed {
-      0%, 100% { transform: scale(1); opacity: 0.9; }
-      50% { transform: scale(1.15); opacity: 0.55; }
-    }
+    @keyframes shutter { 0% { opacity: 0; } 10% { opacity: 0.9; } 100% { opacity: 0; } }
+    .shutter { animation: shutter 300ms ease-out; }
+    @keyframes pulseRed { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.15); opacity: 0.55; } }
     .pulse-red { animation: pulseRed 900ms ease-in-out infinite; }
-
-    /* Smooth drawer */
-    .drawer {
-      will-change: transform;
-    }
-
-    /* Make video fill without distort */
+    .drawer { will-change: transform; }
     video { background: #050812; }
   </style>
 </head>
@@ -138,13 +119,27 @@
 
     <!-- Main Video Stage -->
     <main class="relative flex-1 min-h-0 mt-3 sm:mt-4">
-      <!-- Remote video full-screen -->
       <div class="absolute inset-0 px-3 sm:px-4 pb-28 sm:pb-32 pt-0">
         <div class="relative h-full w-full rounded-3xl overflow-hidden border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.55)] bg-[#050812]">
           <video id="remoteVideo" class="h-full w-full object-cover" autoplay playsinline></video>
 
+          <!-- iOS / autoplay assist overlay -->
+          <div id="tapToPlayOverlay" class="hidden absolute inset-0 z-20 flex items-center justify-center p-4">
+            <div class="glass-soft border border-glassBorder rounded-3xl px-5 py-4 text-center max-w-[560px]">
+              <div class="text-base font-semibold">Tap to start playback</div>
+              <div class="mt-1.5 text-sm text-white/70">
+                Your browser blocked autoplay. Tap below to start remote audio/video.
+              </div>
+              <button id="tapToPlayBtn"
+                      class="tap mt-4 rounded-2xl px-4 py-3 bg-indigoGlow/90 hover:bg-indigoGlow transition border border-white/10 font-semibold inline-flex items-center gap-2">
+                <i data-lucide="play" class="h-5 w-5"></i>
+                Start
+              </button>
+            </div>
+          </div>
+
           <!-- Remote overlay label -->
-          <div class="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+          <div class="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none z-10">
             <div class="glass-soft rounded-2xl px-3 py-2 border border-glassBorder text-xs text-white/80 max-w-[70%] truncate">
               <span class="inline-flex items-center gap-2">
                 <span class="h-2 w-2 rounded-full bg-cyanGlow"></span>
@@ -160,12 +155,11 @@
             </div>
           </div>
 
-          <!-- Shutter flash overlay -->
-          <div id="shutterFlash" class="pointer-events-none absolute inset-0 bg-white opacity-0"></div>
+          <div id="shutterFlash" class="pointer-events-none absolute inset-0 bg-white opacity-0 z-30"></div>
 
-          <!-- Local PiP (draggable) -->
+          <!-- Local PiP -->
           <div id="pip"
-               class="absolute right-3 bottom-3 sm:right-4 sm:bottom-4 w-[34vw] max-w-[220px] min-w-[120px] aspect-video rounded-2xl overflow-hidden glass border border-glassBorder shadow-glow cursor-grab active:cursor-grabbing touch-none">
+               class="absolute right-3 bottom-3 sm:right-4 sm:bottom-4 w-[34vw] max-w-[220px] min-w-[120px] aspect-video rounded-2xl overflow-hidden glass border border-glassBorder shadow-glow cursor-grab active:cursor-grabbing touch-none z-20">
             <video id="localVideo" class="h-full w-full object-cover" autoplay playsinline muted></video>
             <div class="absolute inset-x-0 bottom-0 px-2 py-1 bg-black/35 backdrop-blur-md text-[11px] text-white/85 flex items-center justify-between">
               <span class="truncate">You</span>
@@ -173,8 +167,7 @@
             </div>
           </div>
 
-          <!-- Empty state hint -->
-          <div id="stageHint" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div id="stageHint" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
             <div class="glass-soft border border-glassBorder rounded-3xl px-5 py-4 text-center max-w-[520px] mx-3">
               <div class="text-base font-semibold">Ready when you are</div>
               <div class="mt-1.5 text-sm text-white/70">
@@ -205,13 +198,13 @@
 
             <div class="flex items-center gap-2">
               <button id="snapBtn"
-                      class="tap group rounded-2xl px-3 py-2.5 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+                      class="tap group rounded-2xl px-3 py-2.5 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 <i data-lucide="camera" class="h-5 w-5"></i>
                 <span class="hidden sm:inline text-sm font-semibold">Snap</span>
               </button>
 
               <button id="recordBtn"
-                      class="tap group rounded-2xl px-3 py-2.5 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+                      class="tap group rounded-2xl px-3 py-2.5 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                 <i id="recordIcon" data-lucide="video" class="h-5 w-5"></i>
                 <span id="recordBtnLabel" class="hidden sm:inline text-sm font-semibold">Record</span>
               </button>
@@ -239,7 +232,7 @@
     </main>
   </div>
 
-  <!-- Gallery Drawer (right on desktop, bottom-sheet on mobile) -->
+  <!-- Gallery Drawer -->
   <aside id="galleryDrawer" class="drawer fixed z-50 right-0 top-0 h-full w-full sm:w-[420px] translate-y-full sm:translate-y-0 sm:translate-x-full transition-transform duration-300 ease-out">
     <div class="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[420px] flex flex-col glass border border-glassBorder shadow-glow rounded-t-3xl sm:rounded-l-3xl sm:rounded-r-none overflow-hidden">
       <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-2">
@@ -291,9 +284,7 @@
           </div>
         </div>
         <div class="bg-black/40">
-          <div id="lightboxBody" class="p-3 sm:p-4 flex items-center justify-center">
-            <!-- injected -->
-          </div>
+          <div id="lightboxBody" class="p-3 sm:p-4 flex items-center justify-center"></div>
         </div>
       </div>
     </div>
@@ -392,9 +383,8 @@
 
   <script>
     (() => {
-      // --- Utility ---
+      // ---------- Utils ----------
       const $ = (sel, root = document) => root.querySelector(sel);
-      const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
       function safeUUID() {
@@ -426,9 +416,12 @@
         return u.searchParams.get(name);
       }
 
-      function setQueryParam(name, value) {
+      function setQueryParams(obj) {
         const u = new URL(location.href);
-        u.searchParams.set(name, value);
+        for (const [k, v] of Object.entries(obj)) {
+          if (v === null || v === undefined) u.searchParams.delete(k);
+          else u.searchParams.set(k, v);
+        }
         history.replaceState(null, "", u.toString());
       }
 
@@ -437,7 +430,6 @@
           await navigator.clipboard.writeText(text);
           return true;
         } catch (e) {
-          // Fallback
           try {
             const ta = document.createElement("textarea");
             ta.value = text;
@@ -455,10 +447,9 @@
         }
       }
 
-      // --- Toasts ---
+      // ---------- Toasts ----------
       const toastsEl = $("#toasts");
       function showToast(message, kind = "info", opts = {}) {
-        const id = safeUUID();
         const duration = typeof opts.duration === "number" ? opts.duration : 2600;
 
         const color = kind === "success" ? "border-ok/30" :
@@ -500,10 +491,14 @@
 
         if (duration > 0) setTimeout(remove, duration);
 
-        return { id, el, update: (msg) => { el.querySelector(".text-sm").innerHTML = msg; } , remove };
+        return {
+          el,
+          update: (msg) => { el.querySelector(".text-sm").innerHTML = msg; },
+          remove
+        };
       }
 
-      // --- UI refs ---
+      // ---------- UI refs ----------
       const statusTextEl = $("#statusText");
       const statusDotEl = $("#statusDot");
       const roomLabelEl = $("#roomLabel");
@@ -558,7 +553,10 @@
       const recordBtnLabelEl = $("#recordBtnLabel");
       const recordIconEl = $("#recordIcon");
 
-      // --- App State ---
+      const tapToPlayOverlayEl = $("#tapToPlayOverlay");
+      const tapToPlayBtn = $("#tapToPlayBtn");
+
+      // ---------- State ----------
       const state = {
         role: "host", // host | guest
         roomIdFromUrl: null,
@@ -571,9 +569,6 @@
         localStream: null,
         remoteStream: null,
 
-        micEnabled: true,
-        camEnabled: true,
-
         recording: {
           active: false,
           recorder: null,
@@ -583,11 +578,11 @@
           autoStopTimeout: null
         },
 
-        transfers: new Map(), // id -> { meta, chunks:Array, received:number, bytes:number }
-        gallery: [] // {id, kind, url, blob, ts, direction, mime, name, size}
+        transfers: new Map(),
+        gallery: []
       };
 
-      // --- Status pill ---
+      // ---------- Status ----------
       function setStatus(status) {
         statusTextEl.textContent = status;
         let dot = "bg-warn";
@@ -596,10 +591,9 @@
         if (status === "Disconnected") dot = "bg-danger";
         statusDotEl.className = `h-2.5 w-2.5 rounded-full ${dot}`;
       }
-
-      function setHelperLine(text) {
-        helperLineEl.textContent = text;
-      }
+      function setHelperLine(text) { helperLineEl.textContent = text; }
+      function setRemoteLabel(text) { remoteLabelEl.textContent = text; }
+      function showStageHint(show) { stageHintEl.classList.toggle("hidden", !show); }
 
       function updateHeaderLabels() {
         myIdLabelEl.textContent = state.myPeerId || "—";
@@ -609,7 +603,7 @@
           : (state.roomIdFromUrl || "—");
       }
 
-      // --- Drawer behavior (mobile bottom sheet, desktop right drawer) ---
+      // ---------- Drawer ----------
       function openGallery() {
         const mobile = isProbablyMobile();
         if (mobile) {
@@ -631,7 +625,7 @@
         }
       }
 
-      // --- Lightbox ---
+      // ---------- Lightbox ----------
       let lightboxItem = null;
       function openLightbox(item) {
         lightboxItem = item;
@@ -655,41 +649,28 @@
           v.playsInline = true;
           v.className = "max-h-[70vh] w-full rounded-2xl border border-white/10 shadow-glass bg-black";
           lightboxBodyEl.appendChild(v);
+          v.play().catch(() => {});
         }
 
         lightboxEl.classList.remove("hidden");
       }
-
       function closeLightbox() {
         lightboxEl.classList.add("hidden");
         lightboxBodyEl.innerHTML = "";
         lightboxItem = null;
       }
-
       function downloadItem(item) {
         const a = document.createElement("a");
         a.href = item.url;
-        a.download = item.name || (item.kind === "photo" ? `snapshot-${new Date(item.ts).toISOString()}.webp` : `clip-${new Date(item.ts).toISOString()}.webm`);
+        a.download = item.name || (item.kind === "photo"
+          ? `snapshot-${new Date(item.ts).toISOString()}.webp`
+          : `clip-${new Date(item.ts).toISOString()}.webm`);
         document.body.appendChild(a);
         a.click();
         a.remove();
       }
 
-      // --- Gallery render ---
-      function addGalleryItem(item) {
-        state.gallery.unshift(item);
-        renderGallery();
-      }
-
-      function clearGallery() {
-        // Revoke object URLs (avoid memory leaks)
-        for (const it of state.gallery) {
-          try { URL.revokeObjectURL(it.url); } catch {}
-        }
-        state.gallery = [];
-        renderGallery();
-      }
-
+      // ---------- Gallery ----------
       function renderGallery() {
         const hasItems = state.gallery.length > 0;
         galleryEmptyEl.classList.toggle("hidden", hasItems);
@@ -707,7 +688,9 @@
           card.type = "button";
 
           const badge = item.direction === "sent" ? "Aapne bheja" : "Received";
-          const badgeColor = item.direction === "sent" ? "bg-indigoGlow/25 text-indigo-100 border-indigoGlow/30" : "bg-cyanGlow/15 text-cyan-100 border-cyanGlow/25";
+          const badgeColor = item.direction === "sent"
+            ? "bg-indigoGlow/25 text-indigo-100 border-indigoGlow/30"
+            : "bg-cyanGlow/15 text-cyan-100 border-cyanGlow/25";
           const ts = new Date(item.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
           const thumb = document.createElement("div");
@@ -752,24 +735,32 @@
 
           card.appendChild(thumb);
           card.appendChild(meta);
-
           card.addEventListener("click", () => openLightbox(item));
           galleryGridEl.appendChild(card);
         }
         lucide.createIcons();
       }
 
-      // --- Draggable PiP ---
-      function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+      function addGalleryItem(item) {
+        state.gallery.unshift(item);
+        renderGallery();
+      }
 
+      function clearGallery() {
+        for (const it of state.gallery) {
+          try { URL.revokeObjectURL(it.url); } catch {}
+        }
+        state.gallery = [];
+        renderGallery();
+      }
+
+      // ---------- PiP drag ----------
+      function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
       function initPipDrag() {
         let dragging = false;
         let startX = 0, startY = 0;
         let startLeft = 0, startTop = 0;
 
-        pipEl.style.left = "";
-        pipEl.style.top = "";
-        // Keep initial anchored to bottom-right via CSS right/bottom; once dragged, we convert to left/top.
         function normalizeToLeftTop() {
           const rect = pipEl.getBoundingClientRect();
           const parentRect = pipEl.parentElement.getBoundingClientRect();
@@ -785,6 +776,7 @@
           pipEl.setPointerCapture(e.pointerId);
           pipEl.classList.add("ring-1", "ring-cyanGlow/40");
           normalizeToLeftTop();
+
           const parentRect = pipEl.parentElement.getBoundingClientRect();
           const r = pipEl.getBoundingClientRect();
           startX = e.clientX;
@@ -822,9 +814,24 @@
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", onUp);
         window.addEventListener("pointercancel", onUp);
+
+        // If user rotates/resizes, keep PiP within bounds
+        window.addEventListener("resize", () => {
+          const parentRect = pipEl.parentElement.getBoundingClientRect();
+          const pipRect = pipEl.getBoundingClientRect();
+          // Only clamp if using left/top (dragged mode)
+          if (pipEl.style.left && pipEl.style.top) {
+            const left = parseFloat(pipEl.style.left) || 0;
+            const top = parseFloat(pipEl.style.top) || 0;
+            const maxLeft = Math.max(8, parentRect.width - pipRect.width - 8);
+            const maxTop = Math.max(8, parentRect.height - pipRect.height - 8);
+            pipEl.style.left = clamp(left, 8, maxLeft) + "px";
+            pipEl.style.top = clamp(top, 8, maxTop) + "px";
+          }
+        });
       }
 
-      // --- Media (permissions + fallback) ---
+      // ---------- Media / permissions ----------
       async function getLocalMedia({ video, audio }) {
         return await navigator.mediaDevices.getUserMedia({ video, audio });
       }
@@ -834,7 +841,6 @@
         const msg = (err && err.message) ? err.message : String(err || "Unknown error");
         const lower = msg.toLowerCase();
 
-        // Distinguish common cases
         if (name === "NotAllowedError" || name === "PermissionDeniedError") {
           if (lower.includes("system") || lower.includes("security") || lower.includes("permission denied by system")) {
             return { title: "Blocked by system settings", detail: "Your OS or browser settings are blocking camera/microphone access. Enable permissions in system settings and reload." };
@@ -861,39 +867,7 @@
         permMessageEl.textContent = info.detail;
         permModalEl.classList.remove("hidden");
       }
-
-      function closePermModal() {
-        permModalEl.classList.add("hidden");
-      }
-
-      async function initLocalStream(preferVideo = true) {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          openPermModal({ title: "Unsupported browser", detail: "This browser does not support getUserMedia. Try a modern browser like Chrome, Edge, or Safari (newer versions)." });
-          throw new Error("getUserMedia unsupported");
-        }
-
-        setHelperLine("Requesting camera + microphone…");
-        try {
-          const stream = await getLocalMedia({ video: preferVideo, audio: true });
-          attachLocalStream(stream);
-          state.micEnabled = true;
-          state.camEnabled = !!preferVideo;
-          updateToggleButtons();
-          closePermModal();
-          return stream;
-        } catch (err) {
-          const info = classifyGumError(err);
-          openPermModal(info);
-
-          if (preferVideo) {
-            // do not auto-fallback silently; user decides
-            setHelperLine("Media permission needed. Use Retry or Audio-only.");
-          } else {
-            setHelperLine("Audio-only permission needed. Use Retry.");
-          }
-          throw err;
-        }
-      }
+      function closePermModal() { permModalEl.classList.add("hidden"); }
 
       function stopStream(stream) {
         if (!stream) return;
@@ -903,20 +877,32 @@
       }
 
       function attachLocalStream(stream) {
-        // Cleanup previous
         if (state.localStream && state.localStream !== stream) stopStream(state.localStream);
-
         state.localStream = stream;
         localVideoEl.srcObject = stream;
-
-        // Ensure playback on iOS
         localVideoEl.play().catch(() => {});
+      }
+
+      async function tryPlayRemote() {
+        try {
+          await remoteVideoEl.play();
+          tapToPlayOverlayEl.classList.add("hidden");
+        } catch {
+          // Autoplay blocked
+          tapToPlayOverlayEl.classList.remove("hidden");
+        }
       }
 
       function attachRemoteStream(stream) {
         state.remoteStream = stream;
         remoteVideoEl.srcObject = stream;
-        remoteVideoEl.play().catch(() => {});
+        tryPlayRemote();
+      }
+
+      function hasEnabledVideoTrack() {
+        if (!state.localStream) return false;
+        const vts = state.localStream.getVideoTracks();
+        return vts.length > 0 && vts.some(t => t.enabled);
       }
 
       function updateToggleButtons() {
@@ -935,27 +921,103 @@
         toggleCamBtn.classList.toggle("border-danger/40", !camOn);
         $("#camIcon").setAttribute("data-lucide", camOn ? "video" : "video-off");
 
+        updateActionButtons();
         lucide.createIcons();
       }
 
-      // --- PeerJS / WebRTC ---
-      const PEER_CONFIG = {
-        host: "peerjs.com",
-        secure: true,
-        port: 443,
-        path: "/",
-        // config: { iceServers: [...] } // optional; public cloud already provides defaults
-      };
+      function updateActionButtons() {
+        // Snap requires enabled camera track, and an open data channel
+        const snapOk = !!state.localStream && hasEnabledVideoTrack() && state.dataConn && state.dataConn.open;
+        snapBtn.disabled = !snapOk;
 
-      function setRemoteLabel(text) {
-        remoteLabelEl.textContent = text;
+        // Record requires open data channel and MediaRecorder support and local stream
+        const recOk = !!state.localStream && !!window.MediaRecorder && state.dataConn && state.dataConn.open;
+        recordBtn.disabled = !recOk;
       }
 
-      function showStageHint(show) {
-        stageHintEl.classList.toggle("hidden", !show);
+      async function initLocalStream(preferVideo = true) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          openPermModal({ title: "Unsupported browser", detail: "This browser does not support getUserMedia. Try a modern browser like Chrome, Edge, or Safari (newer versions)." });
+          throw new Error("getUserMedia unsupported");
+        }
+
+        setHelperLine(preferVideo ? "Requesting camera + microphone…" : "Requesting microphone…");
+        try {
+          const stream = await getLocalMedia({ video: preferVideo, audio: true });
+          attachLocalStream(stream);
+          closePermModal();
+          updateToggleButtons();
+          return stream;
+        } catch (err) {
+          const info = classifyGumError(err);
+          openPermModal(info);
+          setHelperLine("Media permission needed. Use Retry or Audio-only.");
+          updateToggleButtons();
+          throw err;
+        }
       }
 
-      function cleanupCallAndConn({ keepPeer = true } = {}) {
+      // ---------- PeerJS init with fallback ----------
+      const PEER_CANDIDATES = [
+        // Most compatible first
+        { host: "0.peerjs.com", port: 443, secure: true, path: "/peerjs" },
+        { host: "peerjs.com", port: 443, secure: true, path: "/peerjs" },
+        { host: "peerjs.com", port: 443, secure: true, path: "/" }
+      ];
+
+      async function initPeerCandidate(cfg, timeoutMs = 9000) {
+        return await new Promise((resolve, reject) => {
+          let done = false;
+          let timer = null;
+          let peer = null;
+
+          const finish = (ok, payload) => {
+            if (done) return;
+            done = true;
+            if (timer) clearTimeout(timer);
+            if (ok) resolve(payload);
+            else reject(payload);
+          };
+
+          try {
+            peer = new Peer(undefined, cfg);
+
+            peer.on("open", (id) => finish(true, { peer, id, cfg }));
+            peer.on("error", (err) => {
+              // If we failed before open, treat as init failure; otherwise toast will handle elsewhere
+              if (!state.myPeerId) {
+                try { peer.destroy(); } catch {}
+                finish(false, err);
+              }
+            });
+
+            timer = setTimeout(() => {
+              try { peer.destroy(); } catch {}
+              finish(false, new Error("PeerJS open timeout"));
+            }, timeoutMs);
+          } catch (err) {
+            try { peer && peer.destroy(); } catch {}
+            finish(false, err);
+          }
+        });
+      }
+
+      async function initPeerWithFallback() {
+        let lastErr = null;
+        for (const cfg of PEER_CANDIDATES) {
+          try {
+            setHelperLine(`Starting peer… (${cfg.host}${cfg.path})`);
+            const res = await initPeerCandidate(cfg);
+            return res;
+          } catch (e) {
+            lastErr = e;
+          }
+        }
+        throw lastErr || new Error("Failed to initialize PeerJS");
+      }
+
+      // ---------- WebRTC / connections ----------
+      function cleanupCallAndConn() {
         try { if (state.call) state.call.close(); } catch {}
         try { if (state.dataConn) state.dataConn.close(); } catch {}
         state.call = null;
@@ -968,17 +1030,12 @@
 
         setRemoteLabel("Waiting for peer…");
         showStageHint(true);
-
-        if (!keepPeer) {
-          try { if (state.peer) state.peer.destroy(); } catch {}
-          state.peer = null;
-        }
+        updateActionButtons();
       }
 
       function setupDataConnection(conn) {
         if (!conn) return;
         if (state.dataConn && state.dataConn.open) {
-          // Prefer existing open connection; close new.
           try { conn.close(); } catch {}
           return;
         }
@@ -986,6 +1043,7 @@
         state.dataConn = conn;
         state.remotePeerId = conn.peer || state.remotePeerId;
         updateHeaderLabels();
+        updateActionButtons();
 
         conn.on("open", () => {
           setStatus(state.call ? "In-Call" : "Online");
@@ -993,11 +1051,12 @@
           showStageHint(!state.call);
           showToast("User connected", "success");
           setHelperLine("Connected. You can snap or record and send.");
-          // handshake
+          updateActionButtons();
           try { conn.send({ t: "hello", ts: Date.now(), from: state.myPeerId }); } catch {}
         });
 
         conn.on("data", (data) => handleDataMessage(data));
+
         conn.on("close", () => {
           if (state.dataConn === conn) state.dataConn = null;
           setStatus(state.peer && !state.peer.destroyed ? "Online" : "Disconnected");
@@ -1005,10 +1064,11 @@
           showStageHint(true);
           showToast("Peer disconnected", "warning");
           setHelperLine("Peer disconnected. Share invite link again to reconnect.");
+          updateActionButtons();
         });
 
         conn.on("error", (err) => {
-          showToast(`Data channel error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 4000 });
+          showToast(`Data channel error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 4500 });
         });
       }
 
@@ -1040,7 +1100,7 @@
         });
 
         call.on("error", (err) => {
-          showToast(`Call error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 4000 });
+          showToast(`Call error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 4500 });
         });
       }
 
@@ -1048,7 +1108,6 @@
         if (!state.peer || !state.myPeerId) throw new Error("Peer not ready");
         if (!remoteId) throw new Error("Missing remoteId");
 
-        // Data connection
         if (!state.dataConn || state.dataConn.closed) {
           const conn = state.peer.connect(remoteId, { reliable: true, serialization: "binary" });
           setupDataConnection(conn);
@@ -1067,32 +1126,15 @@
           try { call.close(); } catch {}
           return;
         }
-        try { call.answer(state.localStream); } catch (e) {
+        try { call.answer(state.localStream); } catch {
           showToast("Failed to answer call", "error");
           return;
         }
         setupCall(call);
       }
 
-      async function initPeer() {
-        return await new Promise((resolve, reject) => {
-          try {
-            const peer = new Peer(undefined, PEER_CONFIG);
-
-            peer.on("open", (id) => resolve({ peer, id }));
-            peer.on("error", (err) => {
-              // If open hasn't happened yet, reject; otherwise just toast.
-              if (!state.myPeerId) reject(err);
-              else showToast(`Peer error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 5000 });
-            });
-          } catch (err) {
-            reject(err);
-          }
-        });
-      }
-
-      // --- DataChannel protocol (chunked transfers) ---
-      const CHUNK_SIZE = 16 * 1024; // 16KB conservative for wide compatibility
+      // ---------- Chunked data transfer ----------
+      const CHUNK_SIZE = 16 * 1024; // 16KB
       const DRAIN_THRESHOLD = 1024 * 1024; // 1MB buffered
       const DRAIN_SLEEP_MS = 18;
 
@@ -1125,7 +1167,7 @@
         const ts = Date.now();
         const totalChunks = Math.max(1, Math.ceil(size / CHUNK_SIZE));
 
-        // Add to local gallery immediately (optimistic)
+        // optimistic local add
         const localUrl = URL.createObjectURL(blob);
         addGalleryItem({
           id: transferId,
@@ -1139,24 +1181,13 @@
           size
         });
 
-        // Toast with progress
-        const t = showToast(`Sending ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(0%)</span>`, "info", { duration: 0 });
+        const toast = showToast(`Sending ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(0%)</span>`, "info", { duration: 0 });
 
-        // Send meta first
         try {
           await waitForDrain();
-          sendJson({
-            t: "meta",
-            id: transferId,
-            kind,
-            mime,
-            size,
-            name,
-            ts,
-            chunks: totalChunks
-          });
-        } catch (e) {
-          t.remove();
+          sendJson({ t: "meta", id: transferId, kind, mime, size, name, ts, chunks: totalChunks });
+        } catch {
+          toast.remove();
           showToast("Failed to start transfer. Data channel not ready.", "error", { duration: 4500 });
           return;
         }
@@ -1168,12 +1199,11 @@
           const start = i * CHUNK_SIZE;
           const end = Math.min(size, start + CHUNK_SIZE);
           const slice = blob.slice(start, end);
+
           let buf;
           try {
-            // Modern and efficient
             buf = await slice.arrayBuffer();
           } catch {
-            // Fallback via FileReader
             buf = await new Promise((resolve, reject) => {
               const fr = new FileReader();
               fr.onerror = () => reject(fr.error || new Error("FileReader error"));
@@ -1184,50 +1214,35 @@
 
           try {
             await waitForDrain();
-            // Include metadata per chunk for robust reassembly
             state.dataConn.send({ t: "chunk", id: transferId, i, n: totalChunks, b: buf });
-          } catch (e) {
-            t.remove();
+          } catch {
+            toast.remove();
             showToast("Transfer failed (connection interrupted).", "error", { duration: 5000 });
             return;
           }
 
           sent += (end - start);
-
-          // Update progress occasionally
           if (i === totalChunks - 1 || i % 12 === 0) {
             const pct = Math.min(100, Math.round((sent / size) * 100));
             const elapsed = (performance.now() - started) / 1000;
             const rate = elapsed > 0 ? `${formatBytes(sent / elapsed)}/s` : "";
-            t.update(`Sending ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(${pct}% ${rate ? "• " + rate : ""})</span>`);
+            toast.update(`Sending ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(${pct}% ${rate ? "• " + rate : ""})</span>`);
           }
         }
 
-        // End marker (optional but helpful)
-        try {
-          await waitForDrain();
-          sendJson({ t: "end", id: transferId, ts: Date.now() });
-        } catch {}
-
-        t.remove();
+        try { await waitForDrain(); sendJson({ t: "end", id: transferId, ts: Date.now() }); } catch {}
+        toast.remove();
         showToast(`${kind === "photo" ? "Photo" : "Clip"} sent`, "success");
       }
 
       function handleDataMessage(data) {
-        // PeerJS may deliver strings or objects depending on serialization
         if (!data) return;
-
-        // If string, try parse JSON (legacy)
         if (typeof data === "string") {
           try { data = JSON.parse(data); } catch { return; }
         }
-
         if (typeof data !== "object") return;
 
-        if (data.t === "hello") {
-          // optional
-          return;
-        }
+        if (data.t === "hello") return;
 
         if (data.t === "meta") {
           const { id, kind, mime, size, name, ts, chunks } = data;
@@ -1250,15 +1265,13 @@
           const tr = state.transfers.get(id);
           if (!tr) return;
 
-          // Ensure array sized
           if (!tr.chunks || !Array.isArray(tr.chunks)) tr.chunks = new Array(n || tr.meta.chunks || 0);
-          if (tr.chunks[i]) return; // ignore duplicates
+          if (tr.chunks[i]) return;
 
-          tr.chunks[i] = b; // ArrayBuffer
+          tr.chunks[i] = b;
           tr.received++;
           tr.bytes += b.byteLength || 0;
 
-          // If complete
           const expected = tr.meta.chunks || n || tr.chunks.length;
           if (tr.received >= expected && expected > 0) {
             const mime = tr.meta.mime || (tr.meta.kind === "photo" ? "image/webp" : "video/webm");
@@ -1266,7 +1279,7 @@
             const blob = new Blob(parts, { type: mime });
             const url = URL.createObjectURL(blob);
 
-            const item = {
+            addGalleryItem({
               id: tr.meta.id,
               kind: tr.meta.kind,
               url,
@@ -1276,37 +1289,34 @@
               mime,
               name: tr.meta.name,
               size: blob.size
-            };
-            addGalleryItem(item);
+            });
 
             state.transfers.delete(id);
-            showToast(`${item.kind === "photo" ? "Photo" : "Clip"} received`, "success");
+            showToast(`${tr.meta.kind === "photo" ? "Photo" : "Clip"} received`, "success");
           }
           return;
         }
 
-        if (data.t === "end") {
-          // If end arrives but chunks incomplete, we just wait; chunk completion finalizes.
-          return;
-        }
+        if (data.t === "end") return;
       }
 
-      // --- Snapshot ---
+      // ---------- Snapshot ----------
       async function captureSnapshotBlob() {
         const v = localVideoEl;
-        const hasFrame = v && v.videoWidth && v.videoHeight;
-        if (!hasFrame) throw new Error("Local video not ready");
+        if (!v || !v.videoWidth || !v.videoHeight) throw new Error("Local video not ready");
 
         const w = v.videoWidth;
         const h = v.videoHeight;
+
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
+
         const ctx = canvas.getContext("2d", { alpha: false });
         ctx.drawImage(v, 0, 0, w, h);
 
-        // Prefer WebP; fallback to JPEG
         const toBlob = (type, quality) => new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+
         let blob = await toBlob("image/webp", 0.92);
         if (!blob) blob = await toBlob("image/jpeg", 0.92);
         if (!blob) throw new Error("Snapshot failed");
@@ -1316,7 +1326,6 @@
       function triggerShutter() {
         shutterFlashEl.classList.remove("shutter");
         shutterFlashEl.style.opacity = "0";
-        // next tick
         requestAnimationFrame(() => {
           shutterFlashEl.classList.add("shutter");
           shutterFlashEl.style.opacity = "1";
@@ -1324,7 +1333,22 @@
         });
       }
 
-      // --- Recording (max 30s) ---
+      async function handleSnap() {
+        if (!state.localStream) { showToast("Local media not ready", "warning"); return; }
+        if (!canSend()) { showToast("Connect to a peer before sending photos.", "warning"); return; }
+        if (!hasEnabledVideoTrack()) { showToast("Camera required for snapshot.", "warning"); return; }
+
+        try {
+          triggerShutter();
+          const blob = await captureSnapshotBlob();
+          const name = `snapshot-${new Date().toISOString().replace(/[:.]/g, "-")}.webp`;
+          await sendBlobChunked({ kind: "photo", blob, name });
+        } catch {
+          showToast("Snapshot failed.", "error");
+        }
+      }
+
+      // ---------- Recording ----------
       function getBestRecorderMimeType() {
         const candidates = [
           "video/webm;codecs=vp9,opus",
@@ -1335,7 +1359,7 @@
         for (const c of candidates) {
           if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) return c;
         }
-        return ""; // let browser decide
+        return "";
       }
 
       function setRecordingUI(active) {
@@ -1354,38 +1378,20 @@
       }
 
       async function startRecording() {
-        if (!state.localStream) {
-          showToast("Local media not ready", "warning");
-          return;
-        }
-        if (!window.MediaRecorder) {
-          showToast("MediaRecorder not supported in this browser.", "error", { duration: 4500 });
-          return;
-        }
-        if (!canSend()) {
-          showToast("Connect to a peer before sending clips.", "warning");
-          return;
-        }
+        if (!state.localStream) { showToast("Local media not ready", "warning"); return; }
+        if (!window.MediaRecorder) { showToast("MediaRecorder not supported in this browser.", "error", { duration: 4500 }); return; }
+        if (!canSend()) { showToast("Connect to a peer before sending clips.", "warning"); return; }
         if (state.recording.active) return;
 
         const mimeType = getBestRecorderMimeType();
-        const options = {
-          mimeType: mimeType || undefined,
-          videoBitsPerSecond: 1_500_000,
-          audioBitsPerSecond: 128_000
-        };
+        const options = { mimeType: mimeType || undefined, videoBitsPerSecond: 1_500_000, audioBitsPerSecond: 128_000 };
 
         let recorder;
         try {
           recorder = new MediaRecorder(state.localStream, options);
-        } catch (e) {
-          // fallback to minimal
-          try {
-            recorder = new MediaRecorder(state.localStream);
-          } catch (err) {
-            showToast("Failed to start recorder.", "error", { duration: 4500 });
-            return;
-          }
+        } catch {
+          try { recorder = new MediaRecorder(state.localStream); }
+          catch { showToast("Failed to start recorder.", "error", { duration: 4500 }); return; }
         }
 
         state.recording.active = true;
@@ -1401,17 +1407,13 @@
           recordingTimerEl.textContent = "REC " + formatTime(elapsed);
         }, 250);
 
-        state.recording.autoStopTimeout = setTimeout(() => {
-          stopRecording();
-        }, 30_000);
+        state.recording.autoStopTimeout = setTimeout(() => stopRecording(), 30_000);
 
         recorder.ondataavailable = (ev) => {
           if (ev.data && ev.data.size > 0) state.recording.chunks.push(ev.data);
         };
 
-        recorder.onerror = () => {
-          showToast("Recording error occurred.", "error");
-        };
+        recorder.onerror = () => showToast("Recording error occurred.", "error");
 
         recorder.onstop = async () => {
           const elapsed = Date.now() - state.recording.startedAt;
@@ -1432,15 +1434,8 @@
 
           setRecordingUI(false);
 
-          if (blob.size < 1024) {
-            showToast("Clip too small (nothing recorded).", "warning");
-            return;
-          }
-
-          // Gentle heads-up for large sends (still allowed)
-          if (blob.size > 25 * 1024 * 1024) {
-            showToast(`Large clip (${formatBytes(blob.size)}). Sending may take longer.`, "warning", { duration: 4500 });
-          }
+          if (blob.size < 1024) { showToast("Clip too small (nothing recorded).", "warning"); return; }
+          if (blob.size > 25 * 1024 * 1024) showToast(`Large clip (${formatBytes(blob.size)}). Sending may take longer.`, "warning", { duration: 4500 });
 
           const name = `clip-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`;
           await sendBlobChunked({ kind: "clip", blob, name });
@@ -1449,43 +1444,20 @@
         };
 
         try {
-          recorder.start(500); // timeslice to avoid massive memory spikes
+          recorder.start(500);
           showToast("Recording started (max 30s).", "success", { duration: 1800 });
-        } catch (e) {
+        } catch {
           state.recording.active = false;
           setRecordingUI(false);
           showToast("Failed to start recording.", "error");
         }
       }
 
-      // --- Buttons ---
-      async function handleSnap() {
-        if (!state.localStream) {
-          showToast("Local media not ready", "warning");
-          return;
-        }
-        if (!canSend()) {
-          showToast("Connect to a peer before sending photos.", "warning");
-          return;
-        }
-
-        try {
-          triggerShutter();
-          const blob = await captureSnapshotBlob();
-          const name = `snapshot-${new Date().toISOString().replace(/[:.]/g, "-")}.webp`;
-          await sendBlobChunked({ kind: "photo", blob, name });
-        } catch (e) {
-          showToast("Snapshot failed.", "error");
-        }
-      }
-
+      // ---------- Controls ----------
       function toggleMic() {
         if (!state.localStream) return;
         const tracks = state.localStream.getAudioTracks();
-        if (!tracks.length) {
-          showToast("No microphone track available.", "warning");
-          return;
-        }
+        if (!tracks.length) { showToast("No microphone track available.", "warning"); return; }
         const newEnabled = !tracks.some(t => t.enabled);
         tracks.forEach(t => t.enabled = newEnabled);
         updateToggleButtons();
@@ -1495,10 +1467,7 @@
       function toggleCamera() {
         if (!state.localStream) return;
         const tracks = state.localStream.getVideoTracks();
-        if (!tracks.length) {
-          showToast("No camera track available (audio-only).", "warning");
-          return;
-        }
+        if (!tracks.length) { showToast("No camera track available (audio-only).", "warning"); return; }
         const newEnabled = !tracks.some(t => t.enabled);
         tracks.forEach(t => t.enabled = newEnabled);
         updateToggleButtons();
@@ -1506,22 +1475,15 @@
       }
 
       function endCall() {
-        // Stop recording if active
         if (state.recording.active) stopRecording();
+        if (state.call) { try { state.call.close(); } catch {} }
+        if (state.dataConn) { try { state.dataConn.close(); } catch {} }
 
-        // Close call & data connection, keep peer online for re-invites
-        if (state.call) {
-          try { state.call.close(); } catch {}
-        }
-        if (state.dataConn) {
-          try { state.dataConn.close(); } catch {}
-        }
         state.call = null;
         state.dataConn = null;
         state.remotePeerId = null;
         updateHeaderLabels();
 
-        // Stop remote stream only; keep local preview unless user wants to fully stop
         state.remoteStream = null;
         remoteVideoEl.srcObject = null;
 
@@ -1529,10 +1491,11 @@
         setRemoteLabel("Waiting for peer…");
         showStageHint(true);
         showToast("Call ended", "warning");
-        setHelperLine("Call ended. Share invite link to start again.");
+        setHelperLine(state.role === "host" ? "Call ended. Copy invite link to start again." : "Call ended. Reload the invite link to reconnect.");
+        updateActionButtons();
       }
 
-      // --- Invite link ---
+      // ---------- Invite link (IMPORTANT: no host=1 in invite) ----------
       function getInviteLink() {
         const base = location.origin + location.pathname;
         const id = state.myPeerId || "";
@@ -1544,31 +1507,54 @@
         inviteLinkEl.textContent = link;
         inviteModalEl.classList.remove("hidden");
       }
+      function closeInviteModal() { inviteModalEl.classList.add("hidden"); }
 
-      function closeInviteModal() {
-        inviteModalEl.classList.add("hidden");
+      // ---------- Boot logic (host refresh fix + URL auto-update safe) ----------
+      function resolveRoleAndRoom() {
+        const room = getQueryParam("room");
+        const hostFlag = getQueryParam("host");
+        const rememberedRole = sessionStorage.getItem("gc_role");
+
+        if (!room) {
+          state.role = "host";
+          state.roomIdFromUrl = null;
+          sessionStorage.setItem("gc_role", "host");
+          return;
+        }
+
+        // If host had previously created the room in this tab/session, keep host role on refresh
+        if (hostFlag === "1" || rememberedRole === "host") {
+          state.role = "host";
+          state.roomIdFromUrl = room;
+          sessionStorage.setItem("gc_role", "host");
+          return;
+        }
+
+        state.role = "guest";
+        state.roomIdFromUrl = room;
+        sessionStorage.setItem("gc_role", "guest");
       }
 
-      // --- Flow: init app ---
       async function boot() {
         lucide.createIcons();
         initPipDrag();
 
-        setStatus("Connecting");
-        setHelperLine("Starting peer…");
-
-        state.roomIdFromUrl = getQueryParam("room");
-        state.role = state.roomIdFromUrl ? "guest" : "host";
+        resolveRoleAndRoom();
         updateHeaderLabels();
 
-        // Peer first (so host can show link quickly), but we still need media before calling.
+        setStatus("Connecting");
+        setHelperLine("Starting peer…");
+        setRemoteLabel("Waiting for peer…");
+        showStageHint(true);
+
+        // Init Peer (with fallback)
         let peerInit;
         try {
-          peerInit = await initPeer();
+          peerInit = await initPeerWithFallback();
         } catch (err) {
           setStatus("Disconnected");
           setHelperLine("Failed to connect to signaling server.");
-          showToast(`Signaling error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 6000 });
+          showToast(`Signaling error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 6500 });
           return;
         }
 
@@ -1577,25 +1563,25 @@
         updateHeaderLabels();
         setStatus("Online");
 
-        // If host, "room" is your peer id; keep room label in sync
-        if (!state.roomIdFromUrl) {
-          setQueryParam("room", state.myPeerId); // keep URL shareable even if user refreshes/copies
+        // If host: auto-update URL to include room + host=1 (but invite link copies without host=1)
+        if (state.role === "host") {
+          setQueryParams({ room: state.myPeerId, host: "1" });
           state.roomIdFromUrl = state.myPeerId;
           updateHeaderLabels();
+          copyLinkInlineBtn.classList.remove("hidden");
+        } else {
+          copyLinkInlineBtn.classList.add("hidden");
         }
 
         // Peer events
         state.peer.on("call", (call) => {
-          // Incoming call
           state.remotePeerId = call.peer;
           updateHeaderLabels();
           setRemoteLabel(`Incoming call from ${call.peer}`);
           answerIncomingCall(call);
         });
 
-        state.peer.on("connection", (conn) => {
-          setupDataConnection(conn);
-        });
+        state.peer.on("connection", (conn) => setupDataConnection(conn));
 
         state.peer.on("disconnected", () => {
           setStatus("Disconnected");
@@ -1608,27 +1594,26 @@
           setHelperLine("Peer closed.");
         });
 
-        // Media init
+        state.peer.on("error", (err) => {
+          showToast(`Peer error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 5000 });
+        });
+
+        // Try to init media (user can fallback if denied)
         try {
           await initLocalStream(true);
           setHelperLine("Media ready.");
-        } catch (e) {
-          // Wait for user action (retry / audio-only). We still allow app to continue online.
+        } catch {
+          // user will use Retry/Audio-only; still allow host to share link
+          setHelperLine(state.role === "host"
+            ? "Share invite link. Allow permissions to enable video/audio."
+            : "Allow permissions to start the call.");
         }
 
-        // Host: show invite
+        // Role-specific behavior
         if (state.role === "host") {
-          copyLinkInlineBtn.classList.remove("hidden");
           openInviteModal();
-          setRemoteLabel("Waiting for peer…");
-          showStageHint(true);
           setHelperLine("Copy invite link to connect.");
         } else {
-          // Guest: room param is the host's peer id; do not rewrite URL
-          state.roomIdFromUrl = getQueryParam("room");
-          updateHeaderLabels();
-          copyLinkInlineBtn.classList.add("hidden");
-
           if (!state.roomIdFromUrl) {
             showToast("Missing room parameter.", "error");
             setHelperLine("Missing room. Open a valid invite link.");
@@ -1638,32 +1623,28 @@
           setRemoteLabel(`Connecting to ${state.roomIdFromUrl}…`);
           setHelperLine("Preparing to call…");
 
-          // Ensure we have local stream (if not, user must allow; we will call after retry)
           if (state.localStream) {
             try {
               await ensureConnectedToPeer(state.roomIdFromUrl);
               await startOutgoingCall(state.roomIdFromUrl);
             } catch (err) {
-              showToast(`Failed to connect/call: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 6000 });
-              setHelperLine("Could not start call. Check that the host is online, then reload.");
+              showToast(`Failed to connect/call: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 6500 });
+              setHelperLine("Could not start call. Ensure host is online, then reload.");
             }
           } else {
             setHelperLine("Allow permissions to start the call.");
           }
         }
 
-        // If user later grants permissions, and we are guest, auto-call.
-        // We'll hook retry buttons to do that.
+        updateToggleButtons();
       }
 
-      // --- Event wiring ---
+      // ---------- Events wiring ----------
       openGalleryBtn.addEventListener("click", openGallery);
       closeGalleryBtn.addEventListener("click", closeGallery);
-      // Click outside drawer on mobile to close (simple)
       galleryDrawerEl.addEventListener("click", (e) => {
         if (e.target === galleryDrawerEl) closeGallery();
       });
-
       clearGalleryBtn.addEventListener("click", () => {
         clearGallery();
         showToast("Gallery cleared", "success", { duration: 1600 });
@@ -1673,9 +1654,7 @@
       lightboxEl.addEventListener("click", (e) => {
         if (e.target === lightboxEl || e.target === lightboxEl.firstElementChild) closeLightbox();
       });
-      downloadBtn.addEventListener("click", () => {
-        if (lightboxItem) downloadItem(lightboxItem);
-      });
+      downloadBtn.addEventListener("click", () => { if (lightboxItem) downloadItem(lightboxItem); });
 
       copyInviteBtn.addEventListener("click", async () => {
         const link = getInviteLink();
@@ -1694,43 +1673,46 @@
         try {
           await initLocalStream(true);
           showToast("Media ready", "success");
+          updateToggleButtons();
 
-          // If guest, auto-connect & call now.
+          // If guest, auto-call now
           const room = getQueryParam("room");
-          if (room && state.role === "guest") {
+          const hostFlag = getQueryParam("host");
+          const isGuest = (sessionStorage.getItem("gc_role") === "guest") && hostFlag !== "1";
+
+          if (room && isGuest) {
+            state.role = "guest";
             state.roomIdFromUrl = room;
             updateHeaderLabels();
             setRemoteLabel(`Connecting to ${room}…`);
             await ensureConnectedToPeer(room);
             await startOutgoingCall(room);
           }
-        } catch {
-          // modal stays open with guidance
-        }
+        } catch {}
       });
 
       audioOnlyBtn.addEventListener("click", async () => {
         try {
           await initLocalStream(false);
-          // Disable camera toggle visual
-          updateToggleButtons();
           showToast("Audio-only ready", "success");
+          updateToggleButtons();
 
-          // If guest, auto-connect & call now.
           const room = getQueryParam("room");
-          if (room && state.role === "guest") {
+          const hostFlag = getQueryParam("host");
+          const isGuest = (sessionStorage.getItem("gc_role") === "guest") && hostFlag !== "1";
+
+          if (room && isGuest) {
+            state.role = "guest";
             state.roomIdFromUrl = room;
             updateHeaderLabels();
             setRemoteLabel(`Connecting to ${room}…`);
             await ensureConnectedToPeer(room);
             await startOutgoingCall(room);
           }
-        } catch {
-          // modal stays open
-        }
+        } catch {}
       });
 
-      closePermBtn.addEventListener("click", closePermModal);
+      closePermBtn.addEventListener("click", () => closePermModal());
 
       toggleMicBtn.addEventListener("click", toggleMic);
       toggleCamBtn.addEventListener("click", toggleCamera);
@@ -1743,7 +1725,12 @@
 
       endBtn.addEventListener("click", endCall);
 
-      // Keyboard shortcuts (desktop)
+      tapToPlayBtn.addEventListener("click", async () => {
+        tapToPlayOverlayEl.classList.add("hidden");
+        tryPlayRemote();
+      });
+
+      // Keyboard shortcuts
       window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           if (!lightboxEl.classList.contains("hidden")) closeLightbox();
@@ -1757,23 +1744,20 @@
         }
       });
 
-      // If visibility changes, keep audio stable (optional)
-      document.addEventListener("visibilitychange", () => {
-        // no-op but kept for future enhancements
-      });
-
-      // Ensure lucide icons after dynamic attribute changes
+      // Re-render lucide icons on dynamic changes
       const mo = new MutationObserver(() => lucide.createIcons());
       mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["data-lucide"] });
 
-      // Start
+      // ---------- Start ----------
       boot().catch((e) => {
         setStatus("Disconnected");
         setHelperLine("App failed to start.");
-        showToast(`Startup error: ${e?.message || "Unknown"}`, "error", { duration: 6000 });
+        showToast(`Startup error: ${e?.message || "Unknown"}`, "error", { duration: 6500 });
       });
+
+      // Keep action buttons updated if connection changes
+      setInterval(() => updateActionButtons(), 700);
     })();
   </script>
 </body>
 </html>
-```
