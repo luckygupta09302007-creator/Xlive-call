@@ -1,278 +1,1779 @@
+```html
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Live Video Call & Media Share</title>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>GlassCall — P2P 1:1 WebRTC Video + Snap/Clip Share</title>
+
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            obsidian: "#0b0f19",
+            slateDeep: "#0f172a",
+            glass: "rgba(255,255,255,0.08)",
+            glass2: "rgba(255,255,255,0.06)",
+            glassBorder: "rgba(255,255,255,0.14)",
+            indigoGlow: "#6366f1",
+            cyanGlow: "#22d3ee",
+            danger: "#ef4444",
+            ok: "#22c55e",
+            warn: "#f59e0b"
+          },
+          boxShadow: {
+            glow: "0 0 0 1px rgba(99,102,241,0.25), 0 10px 50px rgba(34,211,238,0.12)",
+            glass: "0 10px 30px rgba(0,0,0,0.35)"
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@0.465.0/dist/umd/lucide.min.js"></script>
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #ffffff;
-      text-align: center;
-      margin: 0;
-      padding: 15px;
+    :root { color-scheme: dark; }
+    html, body { height: 100%; background: #0b0f19; overflow: hidden; }
+    /* Glassmorphism helpers */
+    .glass {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
-    h2 { margin-bottom: 10px; }
-    .video-container {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      flex-wrap: wrap;
-      margin-top: 15px;
+    .glass-soft {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
     }
-    video {
-      width: 100%;
-      max-width: 420px;
-      height: 300px;
-      background: #000;
-      border-radius: 8px;
-      border: 2px solid #333;
-      object-fit: cover;
+    .no-select { user-select: none; -webkit-user-select: none; }
+    .tap { -webkit-tap-highlight-color: transparent; }
+    /* Shutter flash */
+    @keyframes shutter {
+      0% { opacity: 0; }
+      10% { opacity: 0.9; }
+      100% { opacity: 0; }
     }
-    .controls, .share-box, .media-section {
-      margin-top: 15px;
+    .shutter {
+      animation: shutter 300ms ease-out;
     }
-    button {
-      padding: 10px 18px;
-      font-size: 15px;
-      margin: 5px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      background-color: #007bff;
-      color: white;
+    /* Recording pulse */
+    @keyframes pulseRed {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.15); opacity: 0.55; }
     }
-    button:disabled { background-color: #555; cursor: not-allowed; }
-    input[type="text"] {
-      padding: 8px 12px;
-      width: 280px;
-      border-radius: 4px;
-      border: 1px solid #444;
-      background: #222;
-      color: #fff;
+    .pulse-red { animation: pulseRed 900ms ease-in-out infinite; }
+
+    /* Smooth drawer */
+    .drawer {
+      will-change: transform;
     }
-    #mediaGallery {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .media-item {
-      max-width: 350px;
-      border: 1px solid #444;
-      border-radius: 6px;
-      padding: 5px;
-      background: #1e1e1e;
-    }
-    .media-item img, .media-item video {
-      width: 100%;
-      border-radius: 4px;
-    }
+
+    /* Make video fill without distort */
+    video { background: #050812; }
   </style>
 </head>
-<body>
 
-  <h2>Live Video Call & Snapshot Share</h2>
-
-  <div class="share-box">
-    <span id="status">Connecting to server...</span><br><br>
-    <label>Apna Invite Link Copy Karein:</label><br>
-    <input type="text" id="shareLink" readonly>
-    <button onclick="copyLink()">Link Copy Karein</button>
+<body class="bg-obsidian text-white">
+  <!-- Background glow -->
+  <div class="fixed inset-0 pointer-events-none">
+    <div class="absolute -top-28 -left-28 h-[420px] w-[420px] rounded-full blur-3xl opacity-30"
+         style="background: radial-gradient(circle at 30% 30%, #22d3ee 0%, transparent 60%);"></div>
+    <div class="absolute -bottom-32 -right-24 h-[520px] w-[520px] rounded-full blur-3xl opacity-25"
+         style="background: radial-gradient(circle at 30% 30%, #6366f1 0%, transparent 65%);"></div>
+    <div class="absolute inset-0 opacity-[0.06]"
+         style="background-image: radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 24px 24px;"></div>
   </div>
 
-  <div class="video-container">
-    <div>
-      <h4>Aapka Video (Local)</h4>
-      <video id="localVideo" autoplay muted playsinline></video>
+  <!-- App Shell -->
+  <div class="relative h-full w-full flex flex-col">
+    <!-- Top Bar -->
+    <header class="z-30 px-3 sm:px-4 pt-3 sm:pt-4">
+      <div class="glass-soft rounded-2xl px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="h-9 w-9 rounded-xl glass flex items-center justify-center shadow-glass">
+            <span class="font-semibold tracking-tight">GC</span>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <div id="statusPill" class="px-2.5 py-1 rounded-full text-xs font-semibold border border-glassBorder glass-soft">
+                <span class="inline-flex items-center gap-2">
+                  <span id="statusDot" class="h-2.5 w-2.5 rounded-full bg-warn"></span>
+                  <span id="statusText">Connecting</span>
+                </span>
+              </div>
+              <div class="hidden sm:flex items-center gap-2 text-xs text-white/70 truncate">
+                <span class="truncate">Room:</span>
+                <span id="roomLabel" class="font-mono text-white/90 truncate">—</span>
+              </div>
+            </div>
+            <div class="text-[11px] text-white/60 truncate">
+              <span class="hidden sm:inline">You:</span> <span id="myIdLabel" class="font-mono text-white/80">—</span>
+              <span class="mx-1 text-white/30">•</span>
+              <span class="hidden sm:inline">Peer:</span> <span id="peerIdLabel" class="font-mono text-white/80">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="openGalleryBtn"
+                  class="tap glass-soft hover:glass transition rounded-xl px-3 py-2 text-sm font-semibold border border-glassBorder flex items-center gap-2">
+            <i data-lucide="images" class="h-4 w-4"></i>
+            <span class="hidden sm:inline">Gallery</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Video Stage -->
+    <main class="relative flex-1 min-h-0 mt-3 sm:mt-4">
+      <!-- Remote video full-screen -->
+      <div class="absolute inset-0 px-3 sm:px-4 pb-28 sm:pb-32 pt-0">
+        <div class="relative h-full w-full rounded-3xl overflow-hidden border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.55)] bg-[#050812]">
+          <video id="remoteVideo" class="h-full w-full object-cover" autoplay playsinline></video>
+
+          <!-- Remote overlay label -->
+          <div class="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+            <div class="glass-soft rounded-2xl px-3 py-2 border border-glassBorder text-xs text-white/80 max-w-[70%] truncate">
+              <span class="inline-flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-cyanGlow"></span>
+                <span id="remoteLabel" class="truncate">Waiting for peer…</span>
+              </span>
+            </div>
+
+            <div id="recordingBadge" class="hidden glass-soft rounded-2xl px-3 py-2 border border-glassBorder text-xs font-semibold">
+              <span class="inline-flex items-center gap-2">
+                <span class="h-2.5 w-2.5 rounded-full bg-danger pulse-red"></span>
+                <span id="recordingTimer">REC 00:00</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Shutter flash overlay -->
+          <div id="shutterFlash" class="pointer-events-none absolute inset-0 bg-white opacity-0"></div>
+
+          <!-- Local PiP (draggable) -->
+          <div id="pip"
+               class="absolute right-3 bottom-3 sm:right-4 sm:bottom-4 w-[34vw] max-w-[220px] min-w-[120px] aspect-video rounded-2xl overflow-hidden glass border border-glassBorder shadow-glow cursor-grab active:cursor-grabbing touch-none">
+            <video id="localVideo" class="h-full w-full object-cover" autoplay playsinline muted></video>
+            <div class="absolute inset-x-0 bottom-0 px-2 py-1 bg-black/35 backdrop-blur-md text-[11px] text-white/85 flex items-center justify-between">
+              <span class="truncate">You</span>
+              <span id="localMutedHint" class="text-white/70 hidden">Muted</span>
+            </div>
+          </div>
+
+          <!-- Empty state hint -->
+          <div id="stageHint" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="glass-soft border border-glassBorder rounded-3xl px-5 py-4 text-center max-w-[520px] mx-3">
+              <div class="text-base font-semibold">Ready when you are</div>
+              <div class="mt-1.5 text-sm text-white/70">
+                Share the invite link to start a 1‑on‑1 call. You can send snapshots and 30s clips peer‑to‑peer.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Control Bar -->
+      <div class="absolute inset-x-0 bottom-0 z-30 px-3 sm:px-4 pb-3 sm:pb-4">
+        <div class="mx-auto max-w-4xl glass rounded-3xl border border-glassBorder shadow-glow px-3 py-3 sm:px-4">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <button id="toggleMicBtn"
+                      class="tap group rounded-2xl px-3 py-2.5 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+                <i id="micIcon" data-lucide="mic" class="h-5 w-5"></i>
+                <span class="hidden sm:inline text-sm font-semibold">Mic</span>
+              </button>
+
+              <button id="toggleCamBtn"
+                      class="tap group rounded-2xl px-3 py-2.5 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+                <i id="camIcon" data-lucide="video" class="h-5 w-5"></i>
+                <span class="hidden sm:inline text-sm font-semibold">Camera</span>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="snapBtn"
+                      class="tap group rounded-2xl px-3 py-2.5 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+                <i data-lucide="camera" class="h-5 w-5"></i>
+                <span class="hidden sm:inline text-sm font-semibold">Snap</span>
+              </button>
+
+              <button id="recordBtn"
+                      class="tap group rounded-2xl px-3 py-2.5 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+                <i id="recordIcon" data-lucide="video" class="h-5 w-5"></i>
+                <span id="recordBtnLabel" class="hidden sm:inline text-sm font-semibold">Record</span>
+              </button>
+
+              <button id="endBtn"
+                      class="tap group rounded-2xl px-3 py-2.5 bg-danger/90 hover:bg-danger transition border border-white/10 shadow-glass flex items-center gap-2">
+                <i data-lucide="phone-off" class="h-5 w-5"></i>
+                <span class="hidden sm:inline text-sm font-semibold">End</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-2 text-[11px] text-white/60 flex items-center justify-between gap-2">
+            <div class="truncate">
+              <span id="helperLine">Initializing…</span>
+            </div>
+            <button id="copyLinkInlineBtn"
+                    class="tap hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-cyanGlow hover:text-white transition">
+              <i data-lucide="link" class="h-3.5 w-3.5"></i>
+              Copy invite link
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Gallery Drawer (right on desktop, bottom-sheet on mobile) -->
+  <aside id="galleryDrawer" class="drawer fixed z-50 right-0 top-0 h-full w-full sm:w-[420px] translate-y-full sm:translate-y-0 sm:translate-x-full transition-transform duration-300 ease-out">
+    <div class="absolute inset-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[420px] flex flex-col glass border border-glassBorder shadow-glow rounded-t-3xl sm:rounded-l-3xl sm:rounded-r-none overflow-hidden">
+      <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <div class="font-semibold">Shared Media Gallery</div>
+          <div class="text-xs text-white/60 truncate">Photos & clips sent over the P2P data channel.</div>
+        </div>
+        <button id="closeGalleryBtn" class="tap rounded-xl px-3 py-2 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+          <i data-lucide="x" class="h-4 w-4"></i>
+          <span class="text-sm font-semibold">Close</span>
+        </button>
+      </div>
+
+      <div id="galleryList" class="flex-1 min-h-0 overflow-auto p-4">
+        <div id="galleryEmpty" class="glass-soft border border-glassBorder rounded-2xl px-4 py-4 text-sm text-white/70">
+          No shared media yet. Send a snapshot or record a clip.
+        </div>
+        <div id="galleryGrid" class="hidden grid grid-cols-2 gap-3"></div>
+      </div>
+
+      <div class="p-4 border-t border-white/10 flex items-center justify-between gap-2 text-xs text-white/60">
+        <div class="truncate">Tip: Tap an item to preview & download.</div>
+        <button id="clearGalleryBtn" class="tap px-3 py-2 rounded-xl glass-soft border border-glassBorder hover:glass transition text-xs font-semibold text-white/80">
+          Clear
+        </button>
+      </div>
     </div>
-    <div>
-      <h4>Saamne Wale Ka Video (Remote)</h4>
-      <video id="remoteVideo" autoplay playsinline></video>
+  </aside>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="fixed inset-0 z-[60] hidden">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative h-full w-full flex items-center justify-center p-3 sm:p-6">
+      <div class="glass w-full max-w-5xl rounded-3xl border border-glassBorder overflow-hidden shadow-glow">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div class="min-w-0">
+            <div id="lightboxTitle" class="font-semibold truncate">Preview</div>
+            <div id="lightboxMeta" class="text-xs text-white/60 truncate">—</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="downloadBtn" class="tap rounded-xl px-3 py-2 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+              <i data-lucide="download" class="h-4 w-4"></i>
+              <span class="text-sm font-semibold">Download</span>
+            </button>
+            <button id="closeLightboxBtn" class="tap rounded-xl px-3 py-2 glass-soft border border-glassBorder hover:glass transition flex items-center gap-2">
+              <i data-lucide="x" class="h-4 w-4"></i>
+              <span class="text-sm font-semibold">Close</span>
+            </button>
+          </div>
+        </div>
+        <div class="bg-black/40">
+          <div id="lightboxBody" class="p-3 sm:p-4 flex items-center justify-center">
+            <!-- injected -->
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="controls">
-    <button id="btnCapturePhoto" onclick="captureAndSendPhoto()" disabled>Photo Kheenche Aur Bhejein</button>
-    <button id="btnRecordVideo" onclick="toggleRecordVideo()" disabled>Video Record Karein (Start)</button>
+  <!-- Invite Modal -->
+  <div id="inviteModal" class="fixed inset-0 z-[70] hidden">
+    <div class="absolute inset-0 bg-black/65 backdrop-blur-sm"></div>
+    <div class="relative h-full w-full flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="glass w-full max-w-xl rounded-3xl border border-glassBorder shadow-glow overflow-hidden">
+        <div class="px-5 py-4 border-b border-white/10">
+          <div class="text-lg font-semibold">Invite someone</div>
+          <div class="mt-1 text-sm text-white/70">
+            Copy this link and send it. When they open it, the call will start automatically.
+          </div>
+        </div>
+        <div class="p-5 space-y-3">
+          <div class="glass-soft border border-glassBorder rounded-2xl p-3">
+            <div class="text-xs text-white/60">Invite link</div>
+            <div id="inviteLink" class="mt-1 font-mono text-sm break-all text-white/90">—</div>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <button id="copyInviteBtn" class="tap flex-1 rounded-2xl px-4 py-3 bg-indigoGlow/90 hover:bg-indigoGlow transition border border-white/10 font-semibold flex items-center justify-center gap-2">
+              <i data-lucide="copy" class="h-5 w-5"></i>
+              Copy link
+            </button>
+            <button id="closeInviteBtn" class="tap rounded-2xl px-4 py-3 glass-soft border border-glassBorder hover:glass transition font-semibold flex items-center justify-center gap-2">
+              <i data-lucide="x" class="h-5 w-5"></i>
+              Not now
+            </button>
+          </div>
+          <div class="text-xs text-white/60">
+            Works best on HTTPS (GitHub Pages / Netlify / Vercel). Some browsers block camera/mic on insecure origins.
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="media-section">
-    <h3>Shared Photos & Videos</h3>
-    <div id="mediaGallery"></div>
+  <!-- Permissions / Error Modal -->
+  <div id="permModal" class="fixed inset-0 z-[80] hidden">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative h-full w-full flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="glass w-full max-w-2xl rounded-3xl border border-glassBorder shadow-glow overflow-hidden">
+        <div class="px-5 py-4 border-b border-white/10">
+          <div class="text-lg font-semibold">Camera / Microphone access needed</div>
+          <div id="permSubtitle" class="mt-1 text-sm text-white/70">We could not start your media.</div>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="glass-soft border border-glassBorder rounded-2xl p-4">
+            <div class="text-sm font-semibold">What happened</div>
+            <div id="permMessage" class="mt-1 text-sm text-white/70">—</div>
+          </div>
+
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="glass-soft border border-glassBorder rounded-2xl p-4">
+              <div class="text-sm font-semibold">Quick fixes</div>
+              <ul class="mt-2 text-sm text-white/70 space-y-2 list-disc pl-5">
+                <li>Check the browser address bar permissions (camera/mic allowed).</li>
+                <li>Close other apps using the camera (Zoom/Meet/Camera app).</li>
+                <li>On iOS: Settings → Safari → Camera/Microphone → Allow.</li>
+                <li>Make sure you are on HTTPS (not plain HTTP).</li>
+              </ul>
+            </div>
+            <div class="glass-soft border border-glassBorder rounded-2xl p-4">
+              <div class="text-sm font-semibold">Try fallback</div>
+              <div class="mt-2 text-sm text-white/70">
+                If your camera is unavailable, you can still join with audio-only.
+              </div>
+              <div class="mt-3 flex flex-col gap-2">
+                <button id="retryPermBtn" class="tap rounded-2xl px-4 py-3 bg-indigoGlow/90 hover:bg-indigoGlow transition border border-white/10 font-semibold flex items-center justify-center gap-2">
+                  <i data-lucide="refresh-cw" class="h-5 w-5"></i>
+                  Retry camera + mic
+                </button>
+                <button id="audioOnlyBtn" class="tap rounded-2xl px-4 py-3 glass-soft border border-glassBorder hover:glass transition font-semibold flex items-center justify-center gap-2">
+                  <i data-lucide="mic" class="h-5 w-5"></i>
+                  Continue with audio-only
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2">
+            <button id="closePermBtn" class="tap rounded-2xl px-4 py-3 glass-soft border border-glassBorder hover:glass transition font-semibold flex items-center gap-2">
+              <i data-lucide="x" class="h-5 w-5"></i>
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <canvas id="snapshotCanvas" style="display:none;"></canvas>
+  <!-- Toasts -->
+  <div id="toasts" class="fixed z-[90] right-3 top-3 sm:right-4 sm:top-4 space-y-2 w-[min(420px,calc(100vw-24px))]"></div>
 
   <script>
-    let localStream = null;
-    let peer = null;
-    let currentCall = null;
-    let dataConnection = null;
-    let mediaRecorder = null;
-    let recordedChunks = [];
-    let isRecording = false;
+    (() => {
+      // --- Utility ---
+      const $ = (sel, root = document) => root.querySelector(sel);
+      const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const targetPeerId = urlParams.get('room');
+      function safeUUID() {
+        if (crypto && crypto.randomUUID) return crypto.randomUUID();
+        return "id-" + Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
+      }
 
-    async function init() {
-      try {
-        // Camera aur Microphone ki permission maangna
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById('localVideo').srcObject = localStream;
+      function formatTime(ms) {
+        const total = Math.max(0, Math.floor(ms / 1000));
+        const m = String(Math.floor(total / 60)).padStart(2, "0");
+        const s = String(total % 60).padStart(2, "0");
+        return `${m}:${s}`;
+      }
 
-        // PeerJS connect karna
-        peer = new Peer();
+      function formatBytes(bytes) {
+        const units = ["B","KB","MB","GB"];
+        let b = bytes;
+        let i = 0;
+        while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+        return `${b.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+      }
 
-        peer.on('open', (id) => {
-          document.getElementById('status').innerText = "Aap online hain!";
-          const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${id}`;
-          document.getElementById('shareLink').value = inviteUrl;
+      function isProbablyMobile() {
+        return matchMedia("(max-width: 640px)").matches;
+      }
 
-          // Agar link me already target room ID hai, toh call start karein
-          if (targetPeerId) {
-            connectToUser(targetPeerId);
+      function getQueryParam(name) {
+        const u = new URL(location.href);
+        return u.searchParams.get(name);
+      }
+
+      function setQueryParam(name, value) {
+        const u = new URL(location.href);
+        u.searchParams.set(name, value);
+        history.replaceState(null, "", u.toString());
+      }
+
+      async function copyToClipboard(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (e) {
+          // Fallback
+          try {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.setAttribute("readonly", "");
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand("copy");
+            document.body.removeChild(ta);
+            return ok;
+          } catch {
+            return false;
+          }
+        }
+      }
+
+      // --- Toasts ---
+      const toastsEl = $("#toasts");
+      function showToast(message, kind = "info", opts = {}) {
+        const id = safeUUID();
+        const duration = typeof opts.duration === "number" ? opts.duration : 2600;
+
+        const color = kind === "success" ? "border-ok/30" :
+                      kind === "error" ? "border-danger/40" :
+                      kind === "warning" ? "border-warn/40" :
+                      "border-glassBorder";
+
+        const icon = kind === "success" ? "check-circle" :
+                     kind === "error" ? "alert-triangle" :
+                     kind === "warning" ? "triangle-alert" :
+                     "info";
+
+        const el = document.createElement("div");
+        el.className = `glass-soft ${color} border rounded-2xl px-3.5 py-3 shadow-glow`;
+        el.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="mt-0.5 shrink-0">
+              <i data-lucide="${icon}" class="h-4 w-4"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm text-white/90 leading-snug">${message}</div>
+            </div>
+            <button class="tap shrink-0 rounded-lg px-2 py-1 hover:bg-white/10 transition" aria-label="Close toast">
+              <i data-lucide="x" class="h-4 w-4"></i>
+            </button>
+          </div>
+        `;
+        toastsEl.appendChild(el);
+        lucide.createIcons();
+
+        const closeBtn = el.querySelector("button");
+        const remove = () => {
+          el.style.transition = "transform 180ms ease, opacity 180ms ease";
+          el.style.opacity = "0";
+          el.style.transform = "translateY(-6px)";
+          setTimeout(() => el.remove(), 190);
+        };
+        closeBtn.addEventListener("click", remove);
+
+        if (duration > 0) setTimeout(remove, duration);
+
+        return { id, el, update: (msg) => { el.querySelector(".text-sm").innerHTML = msg; } , remove };
+      }
+
+      // --- UI refs ---
+      const statusTextEl = $("#statusText");
+      const statusDotEl = $("#statusDot");
+      const roomLabelEl = $("#roomLabel");
+      const myIdLabelEl = $("#myIdLabel");
+      const peerIdLabelEl = $("#peerIdLabel");
+      const helperLineEl = $("#helperLine");
+
+      const remoteVideoEl = $("#remoteVideo");
+      const localVideoEl = $("#localVideo");
+      const pipEl = $("#pip");
+
+      const stageHintEl = $("#stageHint");
+      const remoteLabelEl = $("#remoteLabel");
+
+      const toggleMicBtn = $("#toggleMicBtn");
+      const toggleCamBtn = $("#toggleCamBtn");
+      const snapBtn = $("#snapBtn");
+      const recordBtn = $("#recordBtn");
+      const endBtn = $("#endBtn");
+      const localMutedHintEl = $("#localMutedHint");
+
+      const openGalleryBtn = $("#openGalleryBtn");
+      const galleryDrawerEl = $("#galleryDrawer");
+      const closeGalleryBtn = $("#closeGalleryBtn");
+      const galleryEmptyEl = $("#galleryEmpty");
+      const galleryGridEl = $("#galleryGrid");
+      const clearGalleryBtn = $("#clearGalleryBtn");
+
+      const lightboxEl = $("#lightbox");
+      const lightboxTitleEl = $("#lightboxTitle");
+      const lightboxMetaEl = $("#lightboxMeta");
+      const lightboxBodyEl = $("#lightboxBody");
+      const closeLightboxBtn = $("#closeLightboxBtn");
+      const downloadBtn = $("#downloadBtn");
+
+      const inviteModalEl = $("#inviteModal");
+      const inviteLinkEl = $("#inviteLink");
+      const copyInviteBtn = $("#copyInviteBtn");
+      const closeInviteBtn = $("#closeInviteBtn");
+      const copyLinkInlineBtn = $("#copyLinkInlineBtn");
+
+      const permModalEl = $("#permModal");
+      const permSubtitleEl = $("#permSubtitle");
+      const permMessageEl = $("#permMessage");
+      const retryPermBtn = $("#retryPermBtn");
+      const audioOnlyBtn = $("#audioOnlyBtn");
+      const closePermBtn = $("#closePermBtn");
+
+      const shutterFlashEl = $("#shutterFlash");
+      const recordingBadgeEl = $("#recordingBadge");
+      const recordingTimerEl = $("#recordingTimer");
+      const recordBtnLabelEl = $("#recordBtnLabel");
+      const recordIconEl = $("#recordIcon");
+
+      // --- App State ---
+      const state = {
+        role: "host", // host | guest
+        roomIdFromUrl: null,
+        myPeerId: null,
+        remotePeerId: null,
+        peer: null,
+        call: null,
+        dataConn: null,
+
+        localStream: null,
+        remoteStream: null,
+
+        micEnabled: true,
+        camEnabled: true,
+
+        recording: {
+          active: false,
+          recorder: null,
+          chunks: [],
+          startedAt: 0,
+          timerInterval: null,
+          autoStopTimeout: null
+        },
+
+        transfers: new Map(), // id -> { meta, chunks:Array, received:number, bytes:number }
+        gallery: [] // {id, kind, url, blob, ts, direction, mime, name, size}
+      };
+
+      // --- Status pill ---
+      function setStatus(status) {
+        statusTextEl.textContent = status;
+        let dot = "bg-warn";
+        if (status === "Online") dot = "bg-ok";
+        if (status === "In-Call") dot = "bg-cyanGlow";
+        if (status === "Disconnected") dot = "bg-danger";
+        statusDotEl.className = `h-2.5 w-2.5 rounded-full ${dot}`;
+      }
+
+      function setHelperLine(text) {
+        helperLineEl.textContent = text;
+      }
+
+      function updateHeaderLabels() {
+        myIdLabelEl.textContent = state.myPeerId || "—";
+        peerIdLabelEl.textContent = state.remotePeerId || "—";
+        roomLabelEl.textContent = state.role === "host"
+          ? (state.myPeerId || "—")
+          : (state.roomIdFromUrl || "—");
+      }
+
+      // --- Drawer behavior (mobile bottom sheet, desktop right drawer) ---
+      function openGallery() {
+        const mobile = isProbablyMobile();
+        if (mobile) {
+          galleryDrawerEl.classList.remove("translate-y-full");
+          galleryDrawerEl.classList.add("translate-y-0");
+        } else {
+          galleryDrawerEl.classList.remove("sm:translate-x-full");
+          galleryDrawerEl.classList.add("sm:translate-x-0");
+        }
+      }
+      function closeGallery() {
+        const mobile = isProbablyMobile();
+        if (mobile) {
+          galleryDrawerEl.classList.add("translate-y-full");
+          galleryDrawerEl.classList.remove("translate-y-0");
+        } else {
+          galleryDrawerEl.classList.add("sm:translate-x-full");
+          galleryDrawerEl.classList.remove("sm:translate-x-0");
+        }
+      }
+
+      // --- Lightbox ---
+      let lightboxItem = null;
+      function openLightbox(item) {
+        lightboxItem = item;
+        lightboxTitleEl.textContent = item.kind === "photo" ? "Photo" : "Video clip";
+        const badge = item.direction === "sent" ? "Aapne bheja" : "Received";
+        const when = new Date(item.ts).toLocaleString();
+        lightboxMetaEl.textContent = `${badge} • ${when} • ${formatBytes(item.size || 0)}`;
+
+        lightboxBodyEl.innerHTML = "";
+        if (item.kind === "photo") {
+          const img = document.createElement("img");
+          img.src = item.url;
+          img.alt = "Shared photo";
+          img.className = "max-h-[70vh] w-auto rounded-2xl border border-white/10 shadow-glass";
+          img.loading = "eager";
+          lightboxBodyEl.appendChild(img);
+        } else {
+          const v = document.createElement("video");
+          v.src = item.url;
+          v.controls = true;
+          v.playsInline = true;
+          v.className = "max-h-[70vh] w-full rounded-2xl border border-white/10 shadow-glass bg-black";
+          lightboxBodyEl.appendChild(v);
+        }
+
+        lightboxEl.classList.remove("hidden");
+      }
+
+      function closeLightbox() {
+        lightboxEl.classList.add("hidden");
+        lightboxBodyEl.innerHTML = "";
+        lightboxItem = null;
+      }
+
+      function downloadItem(item) {
+        const a = document.createElement("a");
+        a.href = item.url;
+        a.download = item.name || (item.kind === "photo" ? `snapshot-${new Date(item.ts).toISOString()}.webp` : `clip-${new Date(item.ts).toISOString()}.webm`);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+
+      // --- Gallery render ---
+      function addGalleryItem(item) {
+        state.gallery.unshift(item);
+        renderGallery();
+      }
+
+      function clearGallery() {
+        // Revoke object URLs (avoid memory leaks)
+        for (const it of state.gallery) {
+          try { URL.revokeObjectURL(it.url); } catch {}
+        }
+        state.gallery = [];
+        renderGallery();
+      }
+
+      function renderGallery() {
+        const hasItems = state.gallery.length > 0;
+        galleryEmptyEl.classList.toggle("hidden", hasItems);
+        galleryGridEl.classList.toggle("hidden", !hasItems);
+
+        if (!hasItems) {
+          galleryGridEl.innerHTML = "";
+          return;
+        }
+
+        galleryGridEl.innerHTML = "";
+        for (const item of state.gallery) {
+          const card = document.createElement("button");
+          card.className = "tap text-left group glass-soft border border-glassBorder hover:glass transition rounded-2xl overflow-hidden";
+          card.type = "button";
+
+          const badge = item.direction === "sent" ? "Aapne bheja" : "Received";
+          const badgeColor = item.direction === "sent" ? "bg-indigoGlow/25 text-indigo-100 border-indigoGlow/30" : "bg-cyanGlow/15 text-cyan-100 border-cyanGlow/25";
+          const ts = new Date(item.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+          const thumb = document.createElement("div");
+          thumb.className = "relative aspect-video bg-black/40";
+
+          if (item.kind === "photo") {
+            const img = document.createElement("img");
+            img.src = item.url;
+            img.alt = "Shared snapshot";
+            img.className = "h-full w-full object-cover";
+            img.loading = "lazy";
+            thumb.appendChild(img);
+          } else {
+            const v = document.createElement("video");
+            v.src = item.url;
+            v.muted = true;
+            v.playsInline = true;
+            v.preload = "metadata";
+            v.className = "h-full w-full object-cover opacity-90";
+            thumb.appendChild(v);
+
+            const play = document.createElement("div");
+            play.className = "absolute inset-0 flex items-center justify-center";
+            play.innerHTML = `<div class="glass rounded-full p-2.5 border border-glassBorder"><i data-lucide="play" class="h-4 w-4"></i></div>`;
+            thumb.appendChild(play);
+          }
+
+          const meta = document.createElement("div");
+          meta.className = "p-3";
+          meta.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-xs font-semibold text-white/90 truncate">${item.kind === "photo" ? "Snapshot" : "Clip"}</div>
+              <div class="text-[11px] text-white/60 shrink-0">${ts}</div>
+            </div>
+            <div class="mt-1 flex items-center justify-between gap-2">
+              <div class="inline-flex items-center gap-2">
+                <span class="text-[11px] px-2 py-0.5 rounded-full border ${badgeColor}">${badge}</span>
+              </div>
+              <div class="text-[11px] text-white/60 shrink-0">${formatBytes(item.size || 0)}</div>
+            </div>
+          `;
+
+          card.appendChild(thumb);
+          card.appendChild(meta);
+
+          card.addEventListener("click", () => openLightbox(item));
+          galleryGridEl.appendChild(card);
+        }
+        lucide.createIcons();
+      }
+
+      // --- Draggable PiP ---
+      function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+      function initPipDrag() {
+        let dragging = false;
+        let startX = 0, startY = 0;
+        let startLeft = 0, startTop = 0;
+
+        pipEl.style.left = "";
+        pipEl.style.top = "";
+        // Keep initial anchored to bottom-right via CSS right/bottom; once dragged, we convert to left/top.
+        function normalizeToLeftTop() {
+          const rect = pipEl.getBoundingClientRect();
+          const parentRect = pipEl.parentElement.getBoundingClientRect();
+          pipEl.style.right = "auto";
+          pipEl.style.bottom = "auto";
+          pipEl.style.left = (rect.left - parentRect.left) + "px";
+          pipEl.style.top = (rect.top - parentRect.top) + "px";
+        }
+
+        const onDown = (e) => {
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          dragging = true;
+          pipEl.setPointerCapture(e.pointerId);
+          pipEl.classList.add("ring-1", "ring-cyanGlow/40");
+          normalizeToLeftTop();
+          const parentRect = pipEl.parentElement.getBoundingClientRect();
+          const r = pipEl.getBoundingClientRect();
+          startX = e.clientX;
+          startY = e.clientY;
+          startLeft = r.left - parentRect.left;
+          startTop = r.top - parentRect.top;
+          e.preventDefault();
+        };
+
+        const onMove = (e) => {
+          if (!dragging) return;
+          const parentRect = pipEl.parentElement.getBoundingClientRect();
+          const pipRect = pipEl.getBoundingClientRect();
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+
+          const newLeft = startLeft + dx;
+          const newTop = startTop + dy;
+
+          const maxLeft = parentRect.width - pipRect.width;
+          const maxTop = parentRect.height - pipRect.height;
+
+          pipEl.style.left = clamp(newLeft, 8, Math.max(8, maxLeft - 8)) + "px";
+          pipEl.style.top = clamp(newTop, 8, Math.max(8, maxTop - 8)) + "px";
+        };
+
+        const onUp = (e) => {
+          if (!dragging) return;
+          dragging = false;
+          pipEl.classList.remove("ring-1", "ring-cyanGlow/40");
+          try { pipEl.releasePointerCapture(e.pointerId); } catch {}
+        };
+
+        pipEl.addEventListener("pointerdown", onDown);
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+      }
+
+      // --- Media (permissions + fallback) ---
+      async function getLocalMedia({ video, audio }) {
+        return await navigator.mediaDevices.getUserMedia({ video, audio });
+      }
+
+      function classifyGumError(err) {
+        const name = err && err.name ? err.name : "Error";
+        const msg = (err && err.message) ? err.message : String(err || "Unknown error");
+        const lower = msg.toLowerCase();
+
+        // Distinguish common cases
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+          if (lower.includes("system") || lower.includes("security") || lower.includes("permission denied by system")) {
+            return { title: "Blocked by system settings", detail: "Your OS or browser settings are blocking camera/microphone access. Enable permissions in system settings and reload." };
+          }
+          return { title: "Permission denied", detail: "You denied camera/microphone permission. Please allow access and retry." };
+        }
+        if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+          return { title: "No camera/microphone found", detail: "We could not detect a camera or microphone. Connect a device or try audio-only." };
+        }
+        if (name === "NotReadableError" || name === "TrackStartError") {
+          return { title: "Device is busy", detail: "Your camera/microphone may already be in use by another app or tab. Close it and retry." };
+        }
+        if (name === "SecurityError") {
+          return { title: "Insecure context", detail: "Camera/microphone require HTTPS. Deploy this page on HTTPS (GitHub Pages/Netlify/Vercel) or use localhost." };
+        }
+        if (name === "OverconstrainedError") {
+          return { title: "Unsupported constraints", detail: "The requested camera settings are not supported on this device. Try again." };
+        }
+        return { title: name, detail: msg };
+      }
+
+      function openPermModal(info) {
+        permSubtitleEl.textContent = info.title;
+        permMessageEl.textContent = info.detail;
+        permModalEl.classList.remove("hidden");
+      }
+
+      function closePermModal() {
+        permModalEl.classList.add("hidden");
+      }
+
+      async function initLocalStream(preferVideo = true) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          openPermModal({ title: "Unsupported browser", detail: "This browser does not support getUserMedia. Try a modern browser like Chrome, Edge, or Safari (newer versions)." });
+          throw new Error("getUserMedia unsupported");
+        }
+
+        setHelperLine("Requesting camera + microphone…");
+        try {
+          const stream = await getLocalMedia({ video: preferVideo, audio: true });
+          attachLocalStream(stream);
+          state.micEnabled = true;
+          state.camEnabled = !!preferVideo;
+          updateToggleButtons();
+          closePermModal();
+          return stream;
+        } catch (err) {
+          const info = classifyGumError(err);
+          openPermModal(info);
+
+          if (preferVideo) {
+            // do not auto-fallback silently; user decides
+            setHelperLine("Media permission needed. Use Retry or Audio-only.");
+          } else {
+            setHelperLine("Audio-only permission needed. Use Retry.");
+          }
+          throw err;
+        }
+      }
+
+      function stopStream(stream) {
+        if (!stream) return;
+        for (const t of stream.getTracks()) {
+          try { t.stop(); } catch {}
+        }
+      }
+
+      function attachLocalStream(stream) {
+        // Cleanup previous
+        if (state.localStream && state.localStream !== stream) stopStream(state.localStream);
+
+        state.localStream = stream;
+        localVideoEl.srcObject = stream;
+
+        // Ensure playback on iOS
+        localVideoEl.play().catch(() => {});
+      }
+
+      function attachRemoteStream(stream) {
+        state.remoteStream = stream;
+        remoteVideoEl.srcObject = stream;
+        remoteVideoEl.play().catch(() => {});
+      }
+
+      function updateToggleButtons() {
+        // Mic
+        const micTracks = state.localStream ? state.localStream.getAudioTracks() : [];
+        const micOn = micTracks.length ? micTracks.some(t => t.enabled) : false;
+        toggleMicBtn.classList.toggle("bg-danger/20", !micOn);
+        toggleMicBtn.classList.toggle("border-danger/40", !micOn);
+        localMutedHintEl.classList.toggle("hidden", micOn);
+        $("#micIcon").setAttribute("data-lucide", micOn ? "mic" : "mic-off");
+
+        // Cam
+        const camTracks = state.localStream ? state.localStream.getVideoTracks() : [];
+        const camOn = camTracks.length ? camTracks.some(t => t.enabled) : false;
+        toggleCamBtn.classList.toggle("bg-danger/20", !camOn);
+        toggleCamBtn.classList.toggle("border-danger/40", !camOn);
+        $("#camIcon").setAttribute("data-lucide", camOn ? "video" : "video-off");
+
+        lucide.createIcons();
+      }
+
+      // --- PeerJS / WebRTC ---
+      const PEER_CONFIG = {
+        host: "peerjs.com",
+        secure: true,
+        port: 443,
+        path: "/",
+        // config: { iceServers: [...] } // optional; public cloud already provides defaults
+      };
+
+      function setRemoteLabel(text) {
+        remoteLabelEl.textContent = text;
+      }
+
+      function showStageHint(show) {
+        stageHintEl.classList.toggle("hidden", !show);
+      }
+
+      function cleanupCallAndConn({ keepPeer = true } = {}) {
+        try { if (state.call) state.call.close(); } catch {}
+        try { if (state.dataConn) state.dataConn.close(); } catch {}
+        state.call = null;
+        state.dataConn = null;
+        state.remotePeerId = null;
+        updateHeaderLabels();
+
+        state.remoteStream = null;
+        remoteVideoEl.srcObject = null;
+
+        setRemoteLabel("Waiting for peer…");
+        showStageHint(true);
+
+        if (!keepPeer) {
+          try { if (state.peer) state.peer.destroy(); } catch {}
+          state.peer = null;
+        }
+      }
+
+      function setupDataConnection(conn) {
+        if (!conn) return;
+        if (state.dataConn && state.dataConn.open) {
+          // Prefer existing open connection; close new.
+          try { conn.close(); } catch {}
+          return;
+        }
+
+        state.dataConn = conn;
+        state.remotePeerId = conn.peer || state.remotePeerId;
+        updateHeaderLabels();
+
+        conn.on("open", () => {
+          setStatus(state.call ? "In-Call" : "Online");
+          setRemoteLabel(`Connected: ${state.remotePeerId}`);
+          showStageHint(!state.call);
+          showToast("User connected", "success");
+          setHelperLine("Connected. You can snap or record and send.");
+          // handshake
+          try { conn.send({ t: "hello", ts: Date.now(), from: state.myPeerId }); } catch {}
+        });
+
+        conn.on("data", (data) => handleDataMessage(data));
+        conn.on("close", () => {
+          if (state.dataConn === conn) state.dataConn = null;
+          setStatus(state.peer && !state.peer.destroyed ? "Online" : "Disconnected");
+          setRemoteLabel("Peer disconnected");
+          showStageHint(true);
+          showToast("Peer disconnected", "warning");
+          setHelperLine("Peer disconnected. Share invite link again to reconnect.");
+        });
+
+        conn.on("error", (err) => {
+          showToast(`Data channel error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 4000 });
+        });
+      }
+
+      function setupCall(call) {
+        if (state.call) {
+          try { state.call.close(); } catch {}
+        }
+        state.call = call;
+        state.remotePeerId = call.peer || state.remotePeerId;
+        updateHeaderLabels();
+
+        call.on("stream", (remoteStream) => {
+          attachRemoteStream(remoteStream);
+          setStatus("In-Call");
+          setRemoteLabel(`In call with ${state.remotePeerId}`);
+          showStageHint(false);
+          showToast("In call", "success");
+          setHelperLine("In-call. Send snapshots/clips anytime.");
+        });
+
+        call.on("close", () => {
+          if (state.call === call) state.call = null;
+          setStatus(state.dataConn && state.dataConn.open ? "Online" : "Online");
+          setRemoteLabel("Call ended");
+          showStageHint(true);
+          showToast("Call ended", "warning");
+          setHelperLine("Call ended. You can reconnect by re-opening the invite link.");
+          remoteVideoEl.srcObject = null;
+        });
+
+        call.on("error", (err) => {
+          showToast(`Call error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 4000 });
+        });
+      }
+
+      async function ensureConnectedToPeer(remoteId) {
+        if (!state.peer || !state.myPeerId) throw new Error("Peer not ready");
+        if (!remoteId) throw new Error("Missing remoteId");
+
+        // Data connection
+        if (!state.dataConn || state.dataConn.closed) {
+          const conn = state.peer.connect(remoteId, { reliable: true, serialization: "binary" });
+          setupDataConnection(conn);
+        }
+      }
+
+      async function startOutgoingCall(remoteId) {
+        if (!state.localStream) throw new Error("Local stream not ready");
+        const call = state.peer.call(remoteId, state.localStream, { metadata: { ts: Date.now() } });
+        setupCall(call);
+      }
+
+      function answerIncomingCall(call) {
+        if (!state.localStream) {
+          showToast("Cannot answer: local media not ready", "error");
+          try { call.close(); } catch {}
+          return;
+        }
+        try { call.answer(state.localStream); } catch (e) {
+          showToast("Failed to answer call", "error");
+          return;
+        }
+        setupCall(call);
+      }
+
+      async function initPeer() {
+        return await new Promise((resolve, reject) => {
+          try {
+            const peer = new Peer(undefined, PEER_CONFIG);
+
+            peer.on("open", (id) => resolve({ peer, id }));
+            peer.on("error", (err) => {
+              // If open hasn't happened yet, reject; otherwise just toast.
+              if (!state.myPeerId) reject(err);
+              else showToast(`Peer error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 5000 });
+            });
+          } catch (err) {
+            reject(err);
           }
         });
+      }
 
-        // Incoming Call receive karna
-        peer.on('call', (call) => {
-          call.answer(localStream);
-          setupCallHandlers(call);
+      // --- DataChannel protocol (chunked transfers) ---
+      const CHUNK_SIZE = 16 * 1024; // 16KB conservative for wide compatibility
+      const DRAIN_THRESHOLD = 1024 * 1024; // 1MB buffered
+      const DRAIN_SLEEP_MS = 18;
+
+      async function waitForDrain() {
+        const c = state.dataConn;
+        if (!c) return;
+        while (typeof c.bufferSize === "number" && c.bufferSize > DRAIN_THRESHOLD) {
+          await sleep(DRAIN_SLEEP_MS);
+        }
+      }
+
+      function canSend() {
+        return state.dataConn && state.dataConn.open;
+      }
+
+      function sendJson(obj) {
+        if (!canSend()) throw new Error("Data channel not open");
+        state.dataConn.send(obj);
+      }
+
+      async function sendBlobChunked({ kind, blob, name }) {
+        if (!canSend()) {
+          showToast("Not connected yet. Share invite link and wait for peer.", "warning");
+          return;
+        }
+
+        const transferId = safeUUID();
+        const mime = blob.type || (kind === "photo" ? "image/webp" : "video/webm");
+        const size = blob.size;
+        const ts = Date.now();
+        const totalChunks = Math.max(1, Math.ceil(size / CHUNK_SIZE));
+
+        // Add to local gallery immediately (optimistic)
+        const localUrl = URL.createObjectURL(blob);
+        addGalleryItem({
+          id: transferId,
+          kind,
+          url: localUrl,
+          blob,
+          ts,
+          direction: "sent",
+          mime,
+          name,
+          size
         });
 
-        // Incoming Data Connection (Media/Photos receive karne ke liye)
-        peer.on('connection', (conn) => {
+        // Toast with progress
+        const t = showToast(`Sending ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(0%)</span>`, "info", { duration: 0 });
+
+        // Send meta first
+        try {
+          await waitForDrain();
+          sendJson({
+            t: "meta",
+            id: transferId,
+            kind,
+            mime,
+            size,
+            name,
+            ts,
+            chunks: totalChunks
+          });
+        } catch (e) {
+          t.remove();
+          showToast("Failed to start transfer. Data channel not ready.", "error", { duration: 4500 });
+          return;
+        }
+
+        let sent = 0;
+        const started = performance.now();
+
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * CHUNK_SIZE;
+          const end = Math.min(size, start + CHUNK_SIZE);
+          const slice = blob.slice(start, end);
+          let buf;
+          try {
+            // Modern and efficient
+            buf = await slice.arrayBuffer();
+          } catch {
+            // Fallback via FileReader
+            buf = await new Promise((resolve, reject) => {
+              const fr = new FileReader();
+              fr.onerror = () => reject(fr.error || new Error("FileReader error"));
+              fr.onload = () => resolve(fr.result);
+              fr.readAsArrayBuffer(slice);
+            });
+          }
+
+          try {
+            await waitForDrain();
+            // Include metadata per chunk for robust reassembly
+            state.dataConn.send({ t: "chunk", id: transferId, i, n: totalChunks, b: buf });
+          } catch (e) {
+            t.remove();
+            showToast("Transfer failed (connection interrupted).", "error", { duration: 5000 });
+            return;
+          }
+
+          sent += (end - start);
+
+          // Update progress occasionally
+          if (i === totalChunks - 1 || i % 12 === 0) {
+            const pct = Math.min(100, Math.round((sent / size) * 100));
+            const elapsed = (performance.now() - started) / 1000;
+            const rate = elapsed > 0 ? `${formatBytes(sent / elapsed)}/s` : "";
+            t.update(`Sending ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(${pct}% ${rate ? "• " + rate : ""})</span>`);
+          }
+        }
+
+        // End marker (optional but helpful)
+        try {
+          await waitForDrain();
+          sendJson({ t: "end", id: transferId, ts: Date.now() });
+        } catch {}
+
+        t.remove();
+        showToast(`${kind === "photo" ? "Photo" : "Clip"} sent`, "success");
+      }
+
+      function handleDataMessage(data) {
+        // PeerJS may deliver strings or objects depending on serialization
+        if (!data) return;
+
+        // If string, try parse JSON (legacy)
+        if (typeof data === "string") {
+          try { data = JSON.parse(data); } catch { return; }
+        }
+
+        if (typeof data !== "object") return;
+
+        if (data.t === "hello") {
+          // optional
+          return;
+        }
+
+        if (data.t === "meta") {
+          const { id, kind, mime, size, name, ts, chunks } = data;
+          if (!id || !chunks || !size || !kind) return;
+
+          state.transfers.set(id, {
+            meta: { id, kind, mime, size, name, ts, chunks },
+            chunks: new Array(chunks),
+            received: 0,
+            bytes: 0
+          });
+
+          showToast(`Incoming ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(${formatBytes(size)})</span>`, "info", { duration: 2400 });
+          return;
+        }
+
+        if (data.t === "chunk") {
+          const { id, i, n, b } = data;
+          if (!id || typeof i !== "number" || !b) return;
+          const tr = state.transfers.get(id);
+          if (!tr) return;
+
+          // Ensure array sized
+          if (!tr.chunks || !Array.isArray(tr.chunks)) tr.chunks = new Array(n || tr.meta.chunks || 0);
+          if (tr.chunks[i]) return; // ignore duplicates
+
+          tr.chunks[i] = b; // ArrayBuffer
+          tr.received++;
+          tr.bytes += b.byteLength || 0;
+
+          // If complete
+          const expected = tr.meta.chunks || n || tr.chunks.length;
+          if (tr.received >= expected && expected > 0) {
+            const mime = tr.meta.mime || (tr.meta.kind === "photo" ? "image/webp" : "video/webm");
+            const parts = tr.chunks.map(x => x).filter(Boolean);
+            const blob = new Blob(parts, { type: mime });
+            const url = URL.createObjectURL(blob);
+
+            const item = {
+              id: tr.meta.id,
+              kind: tr.meta.kind,
+              url,
+              blob,
+              ts: tr.meta.ts || Date.now(),
+              direction: "received",
+              mime,
+              name: tr.meta.name,
+              size: blob.size
+            };
+            addGalleryItem(item);
+
+            state.transfers.delete(id);
+            showToast(`${item.kind === "photo" ? "Photo" : "Clip"} received`, "success");
+          }
+          return;
+        }
+
+        if (data.t === "end") {
+          // If end arrives but chunks incomplete, we just wait; chunk completion finalizes.
+          return;
+        }
+      }
+
+      // --- Snapshot ---
+      async function captureSnapshotBlob() {
+        const v = localVideoEl;
+        const hasFrame = v && v.videoWidth && v.videoHeight;
+        if (!hasFrame) throw new Error("Local video not ready");
+
+        const w = v.videoWidth;
+        const h = v.videoHeight;
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d", { alpha: false });
+        ctx.drawImage(v, 0, 0, w, h);
+
+        // Prefer WebP; fallback to JPEG
+        const toBlob = (type, quality) => new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+        let blob = await toBlob("image/webp", 0.92);
+        if (!blob) blob = await toBlob("image/jpeg", 0.92);
+        if (!blob) throw new Error("Snapshot failed");
+        return blob;
+      }
+
+      function triggerShutter() {
+        shutterFlashEl.classList.remove("shutter");
+        shutterFlashEl.style.opacity = "0";
+        // next tick
+        requestAnimationFrame(() => {
+          shutterFlashEl.classList.add("shutter");
+          shutterFlashEl.style.opacity = "1";
+          setTimeout(() => shutterFlashEl.style.opacity = "0", 320);
+        });
+      }
+
+      // --- Recording (max 30s) ---
+      function getBestRecorderMimeType() {
+        const candidates = [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm;codecs=h264,opus",
+          "video/webm"
+        ];
+        for (const c of candidates) {
+          if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) return c;
+        }
+        return ""; // let browser decide
+      }
+
+      function setRecordingUI(active) {
+        recordingBadgeEl.classList.toggle("hidden", !active);
+        recordBtn.classList.toggle("bg-danger/20", active);
+        recordBtn.classList.toggle("border-danger/40", active);
+        recordBtnLabelEl.textContent = active ? "Stop" : "Record";
+        recordIconEl.setAttribute("data-lucide", active ? "square" : "video");
+        lucide.createIcons();
+      }
+
+      function stopRecording() {
+        if (!state.recording.active) return;
+        const r = state.recording.recorder;
+        try { if (r && r.state !== "inactive") r.stop(); } catch {}
+      }
+
+      async function startRecording() {
+        if (!state.localStream) {
+          showToast("Local media not ready", "warning");
+          return;
+        }
+        if (!window.MediaRecorder) {
+          showToast("MediaRecorder not supported in this browser.", "error", { duration: 4500 });
+          return;
+        }
+        if (!canSend()) {
+          showToast("Connect to a peer before sending clips.", "warning");
+          return;
+        }
+        if (state.recording.active) return;
+
+        const mimeType = getBestRecorderMimeType();
+        const options = {
+          mimeType: mimeType || undefined,
+          videoBitsPerSecond: 1_500_000,
+          audioBitsPerSecond: 128_000
+        };
+
+        let recorder;
+        try {
+          recorder = new MediaRecorder(state.localStream, options);
+        } catch (e) {
+          // fallback to minimal
+          try {
+            recorder = new MediaRecorder(state.localStream);
+          } catch (err) {
+            showToast("Failed to start recorder.", "error", { duration: 4500 });
+            return;
+          }
+        }
+
+        state.recording.active = true;
+        state.recording.recorder = recorder;
+        state.recording.chunks = [];
+        state.recording.startedAt = Date.now();
+
+        setRecordingUI(true);
+        recordingTimerEl.textContent = "REC 00:00";
+
+        state.recording.timerInterval = setInterval(() => {
+          const elapsed = Date.now() - state.recording.startedAt;
+          recordingTimerEl.textContent = "REC " + formatTime(elapsed);
+        }, 250);
+
+        state.recording.autoStopTimeout = setTimeout(() => {
+          stopRecording();
+        }, 30_000);
+
+        recorder.ondataavailable = (ev) => {
+          if (ev.data && ev.data.size > 0) state.recording.chunks.push(ev.data);
+        };
+
+        recorder.onerror = () => {
+          showToast("Recording error occurred.", "error");
+        };
+
+        recorder.onstop = async () => {
+          const elapsed = Date.now() - state.recording.startedAt;
+
+          clearInterval(state.recording.timerInterval);
+          clearTimeout(state.recording.autoStopTimeout);
+
+          const chunks = state.recording.chunks;
+          const mime = recorder.mimeType || "video/webm";
+          const blob = new Blob(chunks, { type: mime });
+
+          state.recording.active = false;
+          state.recording.recorder = null;
+          state.recording.chunks = [];
+          state.recording.startedAt = 0;
+          state.recording.timerInterval = null;
+          state.recording.autoStopTimeout = null;
+
+          setRecordingUI(false);
+
+          if (blob.size < 1024) {
+            showToast("Clip too small (nothing recorded).", "warning");
+            return;
+          }
+
+          // Gentle heads-up for large sends (still allowed)
+          if (blob.size > 25 * 1024 * 1024) {
+            showToast(`Large clip (${formatBytes(blob.size)}). Sending may take longer.`, "warning", { duration: 4500 });
+          }
+
+          const name = `clip-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`;
+          await sendBlobChunked({ kind: "clip", blob, name });
+
+          setHelperLine(`Last clip: ${formatTime(elapsed)} • ${formatBytes(blob.size)}`);
+        };
+
+        try {
+          recorder.start(500); // timeslice to avoid massive memory spikes
+          showToast("Recording started (max 30s).", "success", { duration: 1800 });
+        } catch (e) {
+          state.recording.active = false;
+          setRecordingUI(false);
+          showToast("Failed to start recording.", "error");
+        }
+      }
+
+      // --- Buttons ---
+      async function handleSnap() {
+        if (!state.localStream) {
+          showToast("Local media not ready", "warning");
+          return;
+        }
+        if (!canSend()) {
+          showToast("Connect to a peer before sending photos.", "warning");
+          return;
+        }
+
+        try {
+          triggerShutter();
+          const blob = await captureSnapshotBlob();
+          const name = `snapshot-${new Date().toISOString().replace(/[:.]/g, "-")}.webp`;
+          await sendBlobChunked({ kind: "photo", blob, name });
+        } catch (e) {
+          showToast("Snapshot failed.", "error");
+        }
+      }
+
+      function toggleMic() {
+        if (!state.localStream) return;
+        const tracks = state.localStream.getAudioTracks();
+        if (!tracks.length) {
+          showToast("No microphone track available.", "warning");
+          return;
+        }
+        const newEnabled = !tracks.some(t => t.enabled);
+        tracks.forEach(t => t.enabled = newEnabled);
+        updateToggleButtons();
+        showToast(newEnabled ? "Mic on" : "Mic off", "info", { duration: 1200 });
+      }
+
+      function toggleCamera() {
+        if (!state.localStream) return;
+        const tracks = state.localStream.getVideoTracks();
+        if (!tracks.length) {
+          showToast("No camera track available (audio-only).", "warning");
+          return;
+        }
+        const newEnabled = !tracks.some(t => t.enabled);
+        tracks.forEach(t => t.enabled = newEnabled);
+        updateToggleButtons();
+        showToast(newEnabled ? "Camera on" : "Camera off", "info", { duration: 1200 });
+      }
+
+      function endCall() {
+        // Stop recording if active
+        if (state.recording.active) stopRecording();
+
+        // Close call & data connection, keep peer online for re-invites
+        if (state.call) {
+          try { state.call.close(); } catch {}
+        }
+        if (state.dataConn) {
+          try { state.dataConn.close(); } catch {}
+        }
+        state.call = null;
+        state.dataConn = null;
+        state.remotePeerId = null;
+        updateHeaderLabels();
+
+        // Stop remote stream only; keep local preview unless user wants to fully stop
+        state.remoteStream = null;
+        remoteVideoEl.srcObject = null;
+
+        setStatus("Online");
+        setRemoteLabel("Waiting for peer…");
+        showStageHint(true);
+        showToast("Call ended", "warning");
+        setHelperLine("Call ended. Share invite link to start again.");
+      }
+
+      // --- Invite link ---
+      function getInviteLink() {
+        const base = location.origin + location.pathname;
+        const id = state.myPeerId || "";
+        return `${base}?room=${encodeURIComponent(id)}`;
+      }
+
+      function openInviteModal() {
+        const link = getInviteLink();
+        inviteLinkEl.textContent = link;
+        inviteModalEl.classList.remove("hidden");
+      }
+
+      function closeInviteModal() {
+        inviteModalEl.classList.add("hidden");
+      }
+
+      // --- Flow: init app ---
+      async function boot() {
+        lucide.createIcons();
+        initPipDrag();
+
+        setStatus("Connecting");
+        setHelperLine("Starting peer…");
+
+        state.roomIdFromUrl = getQueryParam("room");
+        state.role = state.roomIdFromUrl ? "guest" : "host";
+        updateHeaderLabels();
+
+        // Peer first (so host can show link quickly), but we still need media before calling.
+        let peerInit;
+        try {
+          peerInit = await initPeer();
+        } catch (err) {
+          setStatus("Disconnected");
+          setHelperLine("Failed to connect to signaling server.");
+          showToast(`Signaling error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 6000 });
+          return;
+        }
+
+        state.peer = peerInit.peer;
+        state.myPeerId = peerInit.id;
+        updateHeaderLabels();
+        setStatus("Online");
+
+        // If host, "room" is your peer id; keep room label in sync
+        if (!state.roomIdFromUrl) {
+          setQueryParam("room", state.myPeerId); // keep URL shareable even if user refreshes/copies
+          state.roomIdFromUrl = state.myPeerId;
+          updateHeaderLabels();
+        }
+
+        // Peer events
+        state.peer.on("call", (call) => {
+          // Incoming call
+          state.remotePeerId = call.peer;
+          updateHeaderLabels();
+          setRemoteLabel(`Incoming call from ${call.peer}`);
+          answerIncomingCall(call);
+        });
+
+        state.peer.on("connection", (conn) => {
           setupDataConnection(conn);
         });
 
-      } catch (err) {
-        document.getElementById('status').innerText = "Camera/Mic permission nahi mili ya error aayi: " + err.message;
-      }
-    }
+        state.peer.on("disconnected", () => {
+          setStatus("Disconnected");
+          setHelperLine("Disconnected from signaling. Trying to reconnect…");
+          try { state.peer.reconnect(); } catch {}
+        });
 
-    function connectToUser(remoteId) {
-      document.getElementById('status').innerText = "Call connect ho rahi hai...";
-      
-      // Data channel setup
-      const conn = peer.connect(remoteId);
-      setupDataConnection(conn);
+        state.peer.on("close", () => {
+          setStatus("Disconnected");
+          setHelperLine("Peer closed.");
+        });
 
-      // Video Call setup
-      const call = peer.call(remoteId, localStream);
-      setupCallHandlers(call);
-    }
+        // Media init
+        try {
+          await initLocalStream(true);
+          setHelperLine("Media ready.");
+        } catch (e) {
+          // Wait for user action (retry / audio-only). We still allow app to continue online.
+        }
 
-    function setupCallHandlers(call) {
-      currentCall = call;
-      call.on('stream', (remoteStream) => {
-        document.getElementById('remoteVideo').srcObject = remoteStream;
-        document.getElementById('status').innerText = "Call Connected!";
-        document.getElementById('btnCapturePhoto').disabled = false;
-        document.getElementById('btnRecordVideo').disabled = false;
-      });
-      call.on('close', () => {
-        document.getElementById('status').innerText = "Call disconnected.";
-      });
-    }
+        // Host: show invite
+        if (state.role === "host") {
+          copyLinkInlineBtn.classList.remove("hidden");
+          openInviteModal();
+          setRemoteLabel("Waiting for peer…");
+          showStageHint(true);
+          setHelperLine("Copy invite link to connect.");
+        } else {
+          // Guest: room param is the host's peer id; do not rewrite URL
+          state.roomIdFromUrl = getQueryParam("room");
+          updateHeaderLabels();
+          copyLinkInlineBtn.classList.add("hidden");
 
-    function setupDataConnection(conn) {
-      dataConnection = conn;
-      dataConnection.on('data', (data) => {
-        displayReceivedMedia(data);
-      });
-    }
+          if (!state.roomIdFromUrl) {
+            showToast("Missing room parameter.", "error");
+            setHelperLine("Missing room. Open a valid invite link.");
+            return;
+          }
 
-    // Photo capture karke bhejna
-    function captureAndSendPhoto() {
-      const video = document.getElementById('localVideo');
-      const canvas = document.getElementById('snapshotCanvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          setRemoteLabel(`Connecting to ${state.roomIdFromUrl}…`);
+          setHelperLine("Preparing to call…");
 
-      // Data send karna
-      if (dataConnection && dataConnection.open) {
-        dataConnection.send({ type: 'image', data: photoDataUrl });
-        displayMedia(photoDataUrl, 'image', 'Aapne bheja');
-      }
-    }
-
-    // Short Video clip record karke bhejna
-    function toggleRecordVideo() {
-      const btn = document.getElementById('btnRecordVideo');
-
-      if (!isRecording) {
-        recordedChunks = [];
-        mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) recordedChunks.push(e.data);
-        };
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: 'video/webm' });
-          const reader = new FileReader();
-          reader.readAsDataURL(blob);
-          reader.onloadend = () => {
-            const videoDataUrl = reader.result;
-            if (dataConnection && dataConnection.open) {
-              dataConnection.send({ type: 'video', data: videoDataUrl });
-              displayMedia(videoDataUrl, 'video', 'Aapne bheja');
+          // Ensure we have local stream (if not, user must allow; we will call after retry)
+          if (state.localStream) {
+            try {
+              await ensureConnectedToPeer(state.roomIdFromUrl);
+              await startOutgoingCall(state.roomIdFromUrl);
+            } catch (err) {
+              showToast(`Failed to connect/call: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 6000 });
+              setHelperLine("Could not start call. Check that the host is online, then reload.");
             }
-          };
-        };
+          } else {
+            setHelperLine("Allow permissions to start the call.");
+          }
+        }
 
-        mediaRecorder.start();
-        isRecording = true;
-        btn.innerText = "Recording Stop Karein & Bhejein";
-      } else {
-        mediaRecorder.stop();
-        isRecording = false;
-        btn.innerText = "Video Record Karein (Start)";
-      }
-    }
-
-    function displayReceivedMedia(payload) {
-      displayMedia(payload.data, payload.type, 'Saamne wale se aaya');
-    }
-
-    function displayMedia(dataUrl, type, label) {
-      const gallery = document.getElementById('mediaGallery');
-      const container = document.createElement('div');
-      container.className = 'media-item';
-
-      const title = document.createElement('p');
-      title.innerText = label;
-      container.appendChild(title);
-
-      if (type === 'image') {
-        const img = document.createElement('img');
-        img.src = dataUrl;
-        container.appendChild(img);
-      } else if (type === 'video') {
-        const vid = document.createElement('video');
-        vid.src = dataUrl;
-        vid.controls = true;
-        container.appendChild(vid);
+        // If user later grants permissions, and we are guest, auto-call.
+        // We'll hook retry buttons to do that.
       }
 
-      gallery.prepend(container);
-    }
+      // --- Event wiring ---
+      openGalleryBtn.addEventListener("click", openGallery);
+      closeGalleryBtn.addEventListener("click", closeGallery);
+      // Click outside drawer on mobile to close (simple)
+      galleryDrawerEl.addEventListener("click", (e) => {
+        if (e.target === galleryDrawerEl) closeGallery();
+      });
 
-    function copyLink() {
-      const input = document.getElementById('shareLink');
-      input.select();
-      navigator.clipboard.writeText(input.value);
-      alert("Link copy ho gaya! Ab aap ise share kar sakte hain.");
-    }
+      clearGalleryBtn.addEventListener("click", () => {
+        clearGallery();
+        showToast("Gallery cleared", "success", { duration: 1600 });
+      });
 
-    window.onload = init;
+      closeLightboxBtn.addEventListener("click", closeLightbox);
+      lightboxEl.addEventListener("click", (e) => {
+        if (e.target === lightboxEl || e.target === lightboxEl.firstElementChild) closeLightbox();
+      });
+      downloadBtn.addEventListener("click", () => {
+        if (lightboxItem) downloadItem(lightboxItem);
+      });
+
+      copyInviteBtn.addEventListener("click", async () => {
+        const link = getInviteLink();
+        const ok = await copyToClipboard(link);
+        showToast(ok ? "Link copied" : "Copy failed", ok ? "success" : "error");
+      });
+      closeInviteBtn.addEventListener("click", closeInviteModal);
+
+      copyLinkInlineBtn.addEventListener("click", async () => {
+        const link = getInviteLink();
+        const ok = await copyToClipboard(link);
+        showToast(ok ? "Link copied" : "Copy failed", ok ? "success" : "error");
+      });
+
+      retryPermBtn.addEventListener("click", async () => {
+        try {
+          await initLocalStream(true);
+          showToast("Media ready", "success");
+
+          // If guest, auto-connect & call now.
+          const room = getQueryParam("room");
+          if (room && state.role === "guest") {
+            state.roomIdFromUrl = room;
+            updateHeaderLabels();
+            setRemoteLabel(`Connecting to ${room}…`);
+            await ensureConnectedToPeer(room);
+            await startOutgoingCall(room);
+          }
+        } catch {
+          // modal stays open with guidance
+        }
+      });
+
+      audioOnlyBtn.addEventListener("click", async () => {
+        try {
+          await initLocalStream(false);
+          // Disable camera toggle visual
+          updateToggleButtons();
+          showToast("Audio-only ready", "success");
+
+          // If guest, auto-connect & call now.
+          const room = getQueryParam("room");
+          if (room && state.role === "guest") {
+            state.roomIdFromUrl = room;
+            updateHeaderLabels();
+            setRemoteLabel(`Connecting to ${room}…`);
+            await ensureConnectedToPeer(room);
+            await startOutgoingCall(room);
+          }
+        } catch {
+          // modal stays open
+        }
+      });
+
+      closePermBtn.addEventListener("click", closePermModal);
+
+      toggleMicBtn.addEventListener("click", toggleMic);
+      toggleCamBtn.addEventListener("click", toggleCamera);
+      snapBtn.addEventListener("click", handleSnap);
+
+      recordBtn.addEventListener("click", () => {
+        if (state.recording.active) stopRecording();
+        else startRecording();
+      });
+
+      endBtn.addEventListener("click", endCall);
+
+      // Keyboard shortcuts (desktop)
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (!lightboxEl.classList.contains("hidden")) closeLightbox();
+          else if (!inviteModalEl.classList.contains("hidden")) closeInviteModal();
+          else if (!permModalEl.classList.contains("hidden")) closePermModal();
+          else closeGallery();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "g") {
+          e.preventDefault();
+          openGallery();
+        }
+      });
+
+      // If visibility changes, keep audio stable (optional)
+      document.addEventListener("visibilitychange", () => {
+        // no-op but kept for future enhancements
+      });
+
+      // Ensure lucide icons after dynamic attribute changes
+      const mo = new MutationObserver(() => lucide.createIcons());
+      mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["data-lucide"] });
+
+      // Start
+      boot().catch((e) => {
+        setStatus("Disconnected");
+        setHelperLine("App failed to start.");
+        showToast(`Startup error: ${e?.message || "Unknown"}`, "error", { duration: 6000 });
+      });
+    })();
   </script>
 </body>
 </html>
+```
