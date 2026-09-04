@@ -55,7 +55,6 @@
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
     }
-    .no-select { user-select: none; -webkit-user-select: none; }
     .tap { -webkit-tap-highlight-color: transparent; }
     @keyframes shutter { 0% { opacity: 0; } 10% { opacity: 0.9; } 100% { opacity: 0; } }
     .shutter { animation: shutter 300ms ease-out; }
@@ -77,7 +76,6 @@
          style="background-image: radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px); background-size: 24px 24px;"></div>
   </div>
 
-  <!-- App Shell -->
   <div class="relative h-full w-full flex flex-col">
     <!-- Top Bar -->
     <header class="z-30 px-3 sm:px-4 pt-3 sm:pt-4">
@@ -117,13 +115,13 @@
       </div>
     </header>
 
-    <!-- Main Video Stage -->
+    <!-- Main -->
     <main class="relative flex-1 min-h-0 mt-3 sm:mt-4">
       <div class="absolute inset-0 px-3 sm:px-4 pb-28 sm:pb-32 pt-0">
         <div class="relative h-full w-full rounded-3xl overflow-hidden border border-white/10 shadow-[0_30px_80px_rgba(0,0,0,0.55)] bg-[#050812]">
           <video id="remoteVideo" class="h-full w-full object-cover" autoplay playsinline></video>
 
-          <!-- iOS / autoplay assist overlay -->
+          <!-- autoplay assist -->
           <div id="tapToPlayOverlay" class="hidden absolute inset-0 z-20 flex items-center justify-center p-4">
             <div class="glass-soft border border-glassBorder rounded-3xl px-5 py-4 text-center max-w-[560px]">
               <div class="text-base font-semibold">Tap to start playback</div>
@@ -138,7 +136,7 @@
             </div>
           </div>
 
-          <!-- Remote overlay label -->
+          <!-- overlay labels -->
           <div class="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none z-10">
             <div class="glass-soft rounded-2xl px-3 py-2 border border-glassBorder text-xs text-white/80 max-w-[70%] truncate">
               <span class="inline-flex items-center gap-2">
@@ -157,7 +155,7 @@
 
           <div id="shutterFlash" class="pointer-events-none absolute inset-0 bg-white opacity-0 z-30"></div>
 
-          <!-- Local PiP -->
+          <!-- PiP -->
           <div id="pip"
                class="absolute right-3 bottom-3 sm:right-4 sm:bottom-4 w-[34vw] max-w-[220px] min-w-[120px] aspect-video rounded-2xl overflow-hidden glass border border-glassBorder shadow-glow cursor-grab active:cursor-grabbing touch-none z-20">
             <video id="localVideo" class="h-full w-full object-cover" autoplay playsinline muted></video>
@@ -178,7 +176,7 @@
         </div>
       </div>
 
-      <!-- Floating Control Bar -->
+      <!-- Control Bar -->
       <div class="absolute inset-x-0 bottom-0 z-30 px-3 sm:px-4 pb-3 sm:pb-4">
         <div class="mx-auto max-w-4xl glass rounded-3xl border border-glassBorder shadow-glow px-3 py-3 sm:px-4">
           <div class="flex items-center justify-between gap-2">
@@ -317,14 +315,14 @@
             </button>
           </div>
           <div class="text-xs text-white/60">
-            Works best on HTTPS (GitHub Pages / Netlify / Vercel). Some browsers block camera/mic on insecure origins.
+            Tip: If someone sees “Failed to connect to signaling”, ask them to open in Chrome (not in-app browser) or try mobile data/hotspot.
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Permissions / Error Modal -->
+  <!-- Permissions Modal -->
   <div id="permModal" class="fixed inset-0 z-[80] hidden">
     <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
     <div class="relative h-full w-full flex items-end sm:items-center justify-center p-3 sm:p-6">
@@ -343,10 +341,9 @@
             <div class="glass-soft border border-glassBorder rounded-2xl p-4">
               <div class="text-sm font-semibold">Quick fixes</div>
               <ul class="mt-2 text-sm text-white/70 space-y-2 list-disc pl-5">
-                <li>Check the browser address bar permissions (camera/mic allowed).</li>
-                <li>Close other apps using the camera (Zoom/Meet/Camera app).</li>
-                <li>On iOS: Settings → Safari → Camera/Microphone → Allow.</li>
-                <li>Make sure you are on HTTPS (not plain HTTP).</li>
+                <li>Allow camera/mic in browser permissions.</li>
+                <li>Close other apps using the camera.</li>
+                <li>Use HTTPS (GitHub Pages/Netlify/Vercel) or localhost.</li>
               </ul>
             </div>
             <div class="glass-soft border border-glassBorder rounded-2xl p-4">
@@ -378,12 +375,60 @@
     </div>
   </div>
 
+  <!-- Signaling Modal -->
+  <div id="sigModal" class="fixed inset-0 z-[85] hidden">
+    <div class="absolute inset-0 bg-black/75 backdrop-blur-sm"></div>
+    <div class="relative h-full w-full flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="glass w-full max-w-2xl rounded-3xl border border-glassBorder shadow-glow overflow-hidden">
+        <div class="px-5 py-4 border-b border-white/10">
+          <div class="text-lg font-semibold">Cannot reach signaling server</div>
+          <div class="mt-1 text-sm text-white/70">
+            Your network may be blocking WebSocket signaling. Without signaling, the call cannot start.
+          </div>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="glass-soft border border-glassBorder rounded-2xl p-4">
+            <div class="text-sm font-semibold">Details</div>
+            <div id="sigDetails" class="mt-1 text-sm text-white/70 break-words">—</div>
+          </div>
+
+          <div class="glass-soft border border-glassBorder rounded-2xl p-4">
+            <div class="text-sm font-semibold">Try these fixes</div>
+            <ul class="mt-2 text-sm text-white/70 space-y-2 list-disc pl-5">
+              <li>Open the link in <b>Chrome</b> (not WhatsApp/Instagram in‑app browser).</li>
+              <li>Disable AdBlock/Brave Shields/VPN/Private DNS temporarily.</li>
+              <li>Try <b>mobile data</b> / hotspot (Wi‑Fi filters often block WebSockets).</li>
+              <li>Cache-bypass: add <span class="font-mono">?v=2</span> (we already include <span class="font-mono">&v=</span> in invite links).</li>
+            </ul>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2">
+            <button id="retrySigBtn" class="tap flex-1 rounded-2xl px-4 py-3 bg-indigoGlow/90 hover:bg-indigoGlow transition border border-white/10 font-semibold inline-flex items-center justify-center gap-2">
+              <i data-lucide="refresh-cw" class="h-5 w-5"></i>
+              Retry signaling
+            </button>
+            <button id="closeSigBtn" class="tap rounded-2xl px-4 py-3 glass-soft border border-glassBorder hover:glass transition font-semibold inline-flex items-center justify-center gap-2">
+              <i data-lucide="x" class="h-5 w-5"></i>
+              Close
+            </button>
+          </div>
+
+          <div class="text-xs text-white/60">
+            Test: <span class="font-mono">https://0.peerjs.com/peerjs/id</span> should show a UUID. If that works but app fails, likely WebSocket is blocked.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toasts -->
   <div id="toasts" class="fixed z-[90] right-3 top-3 sm:right-4 sm:top-4 space-y-2 w-[min(420px,calc(100vw-24px))]"></div>
 
   <script>
     (() => {
-      // ---------- Utils ----------
+      const APP_VERSION = "1.0.4"; // bump when you redeploy to help cache-bypass
+
+      // Utils
       const $ = (sel, root = document) => root.querySelector(sel);
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -391,14 +436,12 @@
         if (crypto && crypto.randomUUID) return crypto.randomUUID();
         return "id-" + Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
       }
-
       function formatTime(ms) {
         const total = Math.max(0, Math.floor(ms / 1000));
         const m = String(Math.floor(total / 60)).padStart(2, "0");
         const s = String(total % 60).padStart(2, "0");
         return `${m}:${s}`;
       }
-
       function formatBytes(bytes) {
         const units = ["B","KB","MB","GB"];
         let b = bytes;
@@ -406,16 +449,12 @@
         while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
         return `${b.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
       }
-
-      function isProbablyMobile() {
-        return matchMedia("(max-width: 640px)").matches;
-      }
+      function isProbablyMobile() { return matchMedia("(max-width: 640px)").matches; }
 
       function getQueryParam(name) {
         const u = new URL(location.href);
         return u.searchParams.get(name);
       }
-
       function setQueryParams(obj) {
         const u = new URL(location.href);
         for (const [k, v] of Object.entries(obj)) {
@@ -429,7 +468,7 @@
         try {
           await navigator.clipboard.writeText(text);
           return true;
-        } catch (e) {
+        } catch {
           try {
             const ta = document.createElement("textarea");
             ta.value = text;
@@ -447,16 +486,14 @@
         }
       }
 
-      // ---------- Toasts ----------
+      // Toasts
       const toastsEl = $("#toasts");
       function showToast(message, kind = "info", opts = {}) {
         const duration = typeof opts.duration === "number" ? opts.duration : 2600;
-
         const color = kind === "success" ? "border-ok/30" :
                       kind === "error" ? "border-danger/40" :
                       kind === "warning" ? "border-warn/40" :
                       "border-glassBorder";
-
         const icon = kind === "success" ? "check-circle" :
                      kind === "error" ? "alert-triangle" :
                      kind === "warning" ? "triangle-alert" :
@@ -466,9 +503,7 @@
         el.className = `glass-soft ${color} border rounded-2xl px-3.5 py-3 shadow-glow`;
         el.innerHTML = `
           <div class="flex items-start gap-3">
-            <div class="mt-0.5 shrink-0">
-              <i data-lucide="${icon}" class="h-4 w-4"></i>
-            </div>
+            <div class="mt-0.5 shrink-0"><i data-lucide="${icon}" class="h-4 w-4"></i></div>
             <div class="min-w-0">
               <div class="text-sm text-white/90 leading-snug">${message}</div>
             </div>
@@ -480,25 +515,19 @@
         toastsEl.appendChild(el);
         lucide.createIcons();
 
-        const closeBtn = el.querySelector("button");
         const remove = () => {
           el.style.transition = "transform 180ms ease, opacity 180ms ease";
           el.style.opacity = "0";
           el.style.transform = "translateY(-6px)";
           setTimeout(() => el.remove(), 190);
         };
-        closeBtn.addEventListener("click", remove);
-
+        el.querySelector("button").addEventListener("click", remove);
         if (duration > 0) setTimeout(remove, duration);
 
-        return {
-          el,
-          update: (msg) => { el.querySelector(".text-sm").innerHTML = msg; },
-          remove
-        };
+        return { el, update: (msg) => { el.querySelector(".text-sm").innerHTML = msg; }, remove };
       }
 
-      // ---------- UI refs ----------
+      // UI refs
       const statusTextEl = $("#statusText");
       const statusDotEl = $("#statusDot");
       const roomLabelEl = $("#roomLabel");
@@ -547,6 +576,11 @@
       const audioOnlyBtn = $("#audioOnlyBtn");
       const closePermBtn = $("#closePermBtn");
 
+      const sigModalEl = $("#sigModal");
+      const sigDetailsEl = $("#sigDetails");
+      const retrySigBtn = $("#retrySigBtn");
+      const closeSigBtn = $("#closeSigBtn");
+
       const shutterFlashEl = $("#shutterFlash");
       const recordingBadgeEl = $("#recordingBadge");
       const recordingTimerEl = $("#recordingTimer");
@@ -556,7 +590,7 @@
       const tapToPlayOverlayEl = $("#tapToPlayOverlay");
       const tapToPlayBtn = $("#tapToPlayBtn");
 
-      // ---------- State ----------
+      // State
       const state = {
         role: "host", // host | guest
         roomIdFromUrl: null,
@@ -579,10 +613,11 @@
         },
 
         transfers: new Map(),
-        gallery: []
+        gallery: [],
+        signaling: { cfg: null }
       };
 
-      // ---------- Status ----------
+      // Status helpers
       function setStatus(status) {
         statusTextEl.textContent = status;
         let dot = "bg-warn";
@@ -603,7 +638,7 @@
           : (state.roomIdFromUrl || "—");
       }
 
-      // ---------- Drawer ----------
+      // Drawer
       function openGallery() {
         const mobile = isProbablyMobile();
         if (mobile) {
@@ -625,7 +660,7 @@
         }
       }
 
-      // ---------- Lightbox ----------
+      // Lightbox
       let lightboxItem = null;
       function openLightbox(item) {
         lightboxItem = item;
@@ -640,7 +675,6 @@
           img.src = item.url;
           img.alt = "Shared photo";
           img.className = "max-h-[70vh] w-auto rounded-2xl border border-white/10 shadow-glass";
-          img.loading = "eager";
           lightboxBodyEl.appendChild(img);
         } else {
           const v = document.createElement("video");
@@ -651,7 +685,6 @@
           lightboxBodyEl.appendChild(v);
           v.play().catch(() => {});
         }
-
         lightboxEl.classList.remove("hidden");
       }
       function closeLightbox() {
@@ -670,16 +703,12 @@
         a.remove();
       }
 
-      // ---------- Gallery ----------
+      // Gallery
       function renderGallery() {
         const hasItems = state.gallery.length > 0;
         galleryEmptyEl.classList.toggle("hidden", hasItems);
         galleryGridEl.classList.toggle("hidden", !hasItems);
-
-        if (!hasItems) {
-          galleryGridEl.innerHTML = "";
-          return;
-        }
+        if (!hasItems) { galleryGridEl.innerHTML = ""; return; }
 
         galleryGridEl.innerHTML = "";
         for (const item of state.gallery) {
@@ -695,7 +724,6 @@
 
           const thumb = document.createElement("div");
           thumb.className = "relative aspect-video bg-black/40";
-
           if (item.kind === "photo") {
             const img = document.createElement("img");
             img.src = item.url;
@@ -740,21 +768,14 @@
         }
         lucide.createIcons();
       }
-
-      function addGalleryItem(item) {
-        state.gallery.unshift(item);
-        renderGallery();
-      }
-
+      function addGalleryItem(item) { state.gallery.unshift(item); renderGallery(); }
       function clearGallery() {
-        for (const it of state.gallery) {
-          try { URL.revokeObjectURL(it.url); } catch {}
-        }
+        for (const it of state.gallery) { try { URL.revokeObjectURL(it.url); } catch {} }
         state.gallery = [];
         renderGallery();
       }
 
-      // ---------- PiP drag ----------
+      // PiP drag
       function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
       function initPipDrag() {
         let dragging = false;
@@ -815,11 +836,9 @@
         window.addEventListener("pointerup", onUp);
         window.addEventListener("pointercancel", onUp);
 
-        // If user rotates/resizes, keep PiP within bounds
         window.addEventListener("resize", () => {
           const parentRect = pipEl.parentElement.getBoundingClientRect();
           const pipRect = pipEl.getBoundingClientRect();
-          // Only clamp if using left/top (dragged mode)
           if (pipEl.style.left && pipEl.style.top) {
             const left = parseFloat(pipEl.style.left) || 0;
             const top = parseFloat(pipEl.style.top) || 0;
@@ -831,7 +850,7 @@
         });
       }
 
-      // ---------- Media / permissions ----------
+      // Media
       async function getLocalMedia({ video, audio }) {
         return await navigator.mediaDevices.getUserMedia({ video, audio });
       }
@@ -843,7 +862,7 @@
 
         if (name === "NotAllowedError" || name === "PermissionDeniedError") {
           if (lower.includes("system") || lower.includes("security") || lower.includes("permission denied by system")) {
-            return { title: "Blocked by system settings", detail: "Your OS or browser settings are blocking camera/microphone access. Enable permissions in system settings and reload." };
+            return { title: "Blocked by system settings", detail: "Your OS/browser settings are blocking camera/microphone access. Enable permissions in system settings and reload." };
           }
           return { title: "Permission denied", detail: "You denied camera/microphone permission. Please allow access and retry." };
         }
@@ -851,13 +870,10 @@
           return { title: "No camera/microphone found", detail: "We could not detect a camera or microphone. Connect a device or try audio-only." };
         }
         if (name === "NotReadableError" || name === "TrackStartError") {
-          return { title: "Device is busy", detail: "Your camera/microphone may already be in use by another app or tab. Close it and retry." };
+          return { title: "Device is busy", detail: "Your camera/microphone may be in use by another app. Close it and retry." };
         }
         if (name === "SecurityError") {
-          return { title: "Insecure context", detail: "Camera/microphone require HTTPS. Deploy this page on HTTPS (GitHub Pages/Netlify/Vercel) or use localhost." };
-        }
-        if (name === "OverconstrainedError") {
-          return { title: "Unsupported constraints", detail: "The requested camera settings are not supported on this device. Try again." };
+          return { title: "Insecure context", detail: "Camera/microphone require HTTPS. Deploy on HTTPS (GitHub Pages/Netlify/Vercel) or use localhost." };
         }
         return { title: name, detail: msg };
       }
@@ -871,11 +887,8 @@
 
       function stopStream(stream) {
         if (!stream) return;
-        for (const t of stream.getTracks()) {
-          try { t.stop(); } catch {}
-        }
+        for (const t of stream.getTracks()) { try { t.stop(); } catch {} }
       }
-
       function attachLocalStream(stream) {
         if (state.localStream && state.localStream !== stream) stopStream(state.localStream);
         state.localStream = stream;
@@ -888,11 +901,9 @@
           await remoteVideoEl.play();
           tapToPlayOverlayEl.classList.add("hidden");
         } catch {
-          // Autoplay blocked
           tapToPlayOverlayEl.classList.remove("hidden");
         }
       }
-
       function attachRemoteStream(stream) {
         state.remoteStream = stream;
         remoteVideoEl.srcObject = stream;
@@ -906,7 +917,7 @@
       }
 
       function updateToggleButtons() {
-        // Mic
+        // mic
         const micTracks = state.localStream ? state.localStream.getAudioTracks() : [];
         const micOn = micTracks.length ? micTracks.some(t => t.enabled) : false;
         toggleMicBtn.classList.toggle("bg-danger/20", !micOn);
@@ -914,7 +925,7 @@
         localMutedHintEl.classList.toggle("hidden", micOn);
         $("#micIcon").setAttribute("data-lucide", micOn ? "mic" : "mic-off");
 
-        // Cam
+        // cam
         const camTracks = state.localStream ? state.localStream.getVideoTracks() : [];
         const camOn = camTracks.length ? camTracks.some(t => t.enabled) : false;
         toggleCamBtn.classList.toggle("bg-danger/20", !camOn);
@@ -926,18 +937,16 @@
       }
 
       function updateActionButtons() {
-        // Snap requires enabled camera track, and an open data channel
         const snapOk = !!state.localStream && hasEnabledVideoTrack() && state.dataConn && state.dataConn.open;
         snapBtn.disabled = !snapOk;
 
-        // Record requires open data channel and MediaRecorder support and local stream
         const recOk = !!state.localStream && !!window.MediaRecorder && state.dataConn && state.dataConn.open;
         recordBtn.disabled = !recOk;
       }
 
       async function initLocalStream(preferVideo = true) {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          openPermModal({ title: "Unsupported browser", detail: "This browser does not support getUserMedia. Try a modern browser like Chrome, Edge, or Safari (newer versions)." });
+          openPermModal({ title: "Unsupported browser", detail: "This browser does not support getUserMedia. Try Chrome/Edge/Safari (newer versions)." });
           throw new Error("getUserMedia unsupported");
         }
 
@@ -949,23 +958,31 @@
           updateToggleButtons();
           return stream;
         } catch (err) {
-          const info = classifyGumError(err);
-          openPermModal(info);
+          openPermModal(classifyGumError(err));
           setHelperLine("Media permission needed. Use Retry or Audio-only.");
           updateToggleButtons();
           throw err;
         }
       }
 
-      // ---------- PeerJS init with fallback ----------
+      // Signaling modal
+      function openSigModal(details) {
+        sigDetailsEl.textContent = details || "Unknown signaling error.";
+        sigModalEl.classList.remove("hidden");
+      }
+      function closeSigModal() { sigModalEl.classList.add("hidden"); }
+
+      // PeerJS init with better fallback
       const PEER_CANDIDATES = [
-        // Most compatible first
-        { host: "0.peerjs.com", port: 443, secure: true, path: "/peerjs" },
-        { host: "peerjs.com", port: 443, secure: true, path: "/peerjs" },
-        { host: "peerjs.com", port: 443, secure: true, path: "/" }
+        { host: "0.peerjs.com", port: 443, secure: true, path: "/peerjs", key: "peerjs" },
+        { host: "1.peerjs.com", port: 443, secure: true, path: "/peerjs", key: "peerjs" },
+        { host: "2.peerjs.com", port: 443, secure: true, path: "/peerjs", key: "peerjs" },
+        { host: "3.peerjs.com", port: 443, secure: true, path: "/peerjs", key: "peerjs" },
+        { host: "peerjs.com", port: 443, secure: true, path: "/peerjs", key: "peerjs" },
+        { host: "peerjs.com", port: 443, secure: true, path: "/", key: "peerjs" }
       ];
 
-      async function initPeerCandidate(cfg, timeoutMs = 9000) {
+      async function initPeerCandidate(cfg, timeoutMs = 25000) {
         return await new Promise((resolve, reject) => {
           let done = false;
           let timer = null;
@@ -975,8 +992,7 @@
             if (done) return;
             done = true;
             if (timer) clearTimeout(timer);
-            if (ok) resolve(payload);
-            else reject(payload);
+            ok ? resolve(payload) : reject(payload);
           };
 
           try {
@@ -984,7 +1000,7 @@
 
             peer.on("open", (id) => finish(true, { peer, id, cfg }));
             peer.on("error", (err) => {
-              // If we failed before open, treat as init failure; otherwise toast will handle elsewhere
+              // If open hasn't happened, treat as init failure
               if (!state.myPeerId) {
                 try { peer.destroy(); } catch {}
                 finish(false, err);
@@ -993,7 +1009,7 @@
 
             timer = setTimeout(() => {
               try { peer.destroy(); } catch {}
-              finish(false, new Error("PeerJS open timeout"));
+              finish(false, new Error("PeerJS open timeout (possible WebSocket block)"));
             }, timeoutMs);
           } catch (err) {
             try { peer && peer.destroy(); } catch {}
@@ -1016,29 +1032,21 @@
         throw lastErr || new Error("Failed to initialize PeerJS");
       }
 
-      // ---------- WebRTC / connections ----------
-      function cleanupCallAndConn() {
-        try { if (state.call) state.call.close(); } catch {}
-        try { if (state.dataConn) state.dataConn.close(); } catch {}
+      function destroyPeer() {
+        try { if (state.peer) state.peer.destroy(); } catch {}
+        state.peer = null;
+        state.myPeerId = null;
+        state.remotePeerId = null;
         state.call = null;
         state.dataConn = null;
-        state.remotePeerId = null;
+        state.signaling.cfg = null;
         updateHeaderLabels();
-
-        state.remoteStream = null;
-        remoteVideoEl.srcObject = null;
-
-        setRemoteLabel("Waiting for peer…");
-        showStageHint(true);
-        updateActionButtons();
       }
 
+      // WebRTC / connections
       function setupDataConnection(conn) {
         if (!conn) return;
-        if (state.dataConn && state.dataConn.open) {
-          try { conn.close(); } catch {}
-          return;
-        }
+        if (state.dataConn && state.dataConn.open) { try { conn.close(); } catch {} return; }
 
         state.dataConn = conn;
         state.remotePeerId = conn.peer || state.remotePeerId;
@@ -1073,9 +1081,7 @@
       }
 
       function setupCall(call) {
-        if (state.call) {
-          try { state.call.close(); } catch {}
-        }
+        if (state.call) { try { state.call.close(); } catch {} }
         state.call = call;
         state.remotePeerId = call.peer || state.remotePeerId;
         updateHeaderLabels();
@@ -1091,11 +1097,11 @@
 
         call.on("close", () => {
           if (state.call === call) state.call = null;
-          setStatus(state.dataConn && state.dataConn.open ? "Online" : "Online");
+          setStatus("Online");
           setRemoteLabel("Call ended");
           showStageHint(true);
           showToast("Call ended", "warning");
-          setHelperLine("Call ended. You can reconnect by re-opening the invite link.");
+          setHelperLine("Call ended. Re-open invite link to reconnect.");
           remoteVideoEl.srcObject = null;
         });
 
@@ -1133,9 +1139,9 @@
         setupCall(call);
       }
 
-      // ---------- Chunked data transfer ----------
-      const CHUNK_SIZE = 16 * 1024; // 16KB
-      const DRAIN_THRESHOLD = 1024 * 1024; // 1MB buffered
+      // Data transfer protocol
+      const CHUNK_SIZE = 16 * 1024;
+      const DRAIN_THRESHOLD = 1024 * 1024;
       const DRAIN_SLEEP_MS = 18;
 
       async function waitForDrain() {
@@ -1145,21 +1151,14 @@
           await sleep(DRAIN_SLEEP_MS);
         }
       }
-
-      function canSend() {
-        return state.dataConn && state.dataConn.open;
-      }
-
+      function canSend() { return state.dataConn && state.dataConn.open; }
       function sendJson(obj) {
         if (!canSend()) throw new Error("Data channel not open");
         state.dataConn.send(obj);
       }
 
       async function sendBlobChunked({ kind, blob, name }) {
-        if (!canSend()) {
-          showToast("Not connected yet. Share invite link and wait for peer.", "warning");
-          return;
-        }
+        if (!canSend()) { showToast("Connect to a peer first.", "warning"); return; }
 
         const transferId = safeUUID();
         const mime = blob.type || (kind === "photo" ? "image/webp" : "video/webm");
@@ -1167,19 +1166,8 @@
         const ts = Date.now();
         const totalChunks = Math.max(1, Math.ceil(size / CHUNK_SIZE));
 
-        // optimistic local add
         const localUrl = URL.createObjectURL(blob);
-        addGalleryItem({
-          id: transferId,
-          kind,
-          url: localUrl,
-          blob,
-          ts,
-          direction: "sent",
-          mime,
-          name,
-          size
-        });
+        addGalleryItem({ id: transferId, kind, url: localUrl, blob, ts, direction: "sent", mime, name, size });
 
         const toast = showToast(`Sending ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(0%)</span>`, "info", { duration: 0 });
 
@@ -1188,7 +1176,7 @@
           sendJson({ t: "meta", id: transferId, kind, mime, size, name, ts, chunks: totalChunks });
         } catch {
           toast.remove();
-          showToast("Failed to start transfer. Data channel not ready.", "error", { duration: 4500 });
+          showToast("Failed to start transfer.", "error", { duration: 4500 });
           return;
         }
 
@@ -1201,9 +1189,8 @@
           const slice = blob.slice(start, end);
 
           let buf;
-          try {
-            buf = await slice.arrayBuffer();
-          } catch {
+          try { buf = await slice.arrayBuffer(); }
+          catch {
             buf = await new Promise((resolve, reject) => {
               const fr = new FileReader();
               fr.onerror = () => reject(fr.error || new Error("FileReader error"));
@@ -1237,24 +1224,13 @@
 
       function handleDataMessage(data) {
         if (!data) return;
-        if (typeof data === "string") {
-          try { data = JSON.parse(data); } catch { return; }
-        }
+        if (typeof data === "string") { try { data = JSON.parse(data); } catch { return; } }
         if (typeof data !== "object") return;
-
-        if (data.t === "hello") return;
 
         if (data.t === "meta") {
           const { id, kind, mime, size, name, ts, chunks } = data;
           if (!id || !chunks || !size || !kind) return;
-
-          state.transfers.set(id, {
-            meta: { id, kind, mime, size, name, ts, chunks },
-            chunks: new Array(chunks),
-            received: 0,
-            bytes: 0
-          });
-
+          state.transfers.set(id, { meta: { id, kind, mime, size, name, ts, chunks }, chunks: new Array(chunks), received: 0, bytes: 0 });
           showToast(`Incoming ${kind === "photo" ? "photo" : "clip"}… <span class="text-white/60">(${formatBytes(size)})</span>`, "info", { duration: 2400 });
           return;
         }
@@ -1275,7 +1251,7 @@
           const expected = tr.meta.chunks || n || tr.chunks.length;
           if (tr.received >= expected && expected > 0) {
             const mime = tr.meta.mime || (tr.meta.kind === "photo" ? "image/webp" : "video/webm");
-            const parts = tr.chunks.map(x => x).filter(Boolean);
+            const parts = tr.chunks.filter(Boolean);
             const blob = new Blob(parts, { type: mime });
             const url = URL.createObjectURL(blob);
 
@@ -1294,29 +1270,23 @@
             state.transfers.delete(id);
             showToast(`${tr.meta.kind === "photo" ? "Photo" : "Clip"} received`, "success");
           }
-          return;
         }
-
-        if (data.t === "end") return;
       }
 
-      // ---------- Snapshot ----------
+      // Snapshot
       async function captureSnapshotBlob() {
         const v = localVideoEl;
         if (!v || !v.videoWidth || !v.videoHeight) throw new Error("Local video not ready");
 
         const w = v.videoWidth;
         const h = v.videoHeight;
-
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
-
         const ctx = canvas.getContext("2d", { alpha: false });
         ctx.drawImage(v, 0, 0, w, h);
 
         const toBlob = (type, quality) => new Promise((resolve) => canvas.toBlob(resolve, type, quality));
-
         let blob = await toBlob("image/webp", 0.92);
         if (!blob) blob = await toBlob("image/jpeg", 0.92);
         if (!blob) throw new Error("Snapshot failed");
@@ -1348,7 +1318,7 @@
         }
       }
 
-      // ---------- Recording ----------
+      // Recording
       function getBestRecorderMimeType() {
         const candidates = [
           "video/webm;codecs=vp9,opus",
@@ -1361,7 +1331,6 @@
         }
         return "";
       }
-
       function setRecordingUI(active) {
         recordingBadgeEl.classList.toggle("hidden", !active);
         recordBtn.classList.toggle("bg-danger/20", active);
@@ -1370,13 +1339,11 @@
         recordIconEl.setAttribute("data-lucide", active ? "square" : "video");
         lucide.createIcons();
       }
-
       function stopRecording() {
         if (!state.recording.active) return;
         const r = state.recording.recorder;
         try { if (r && r.state !== "inactive") r.stop(); } catch {}
       }
-
       async function startRecording() {
         if (!state.localStream) { showToast("Local media not ready", "warning"); return; }
         if (!window.MediaRecorder) { showToast("MediaRecorder not supported in this browser.", "error", { duration: 4500 }); return; }
@@ -1387,9 +1354,8 @@
         const options = { mimeType: mimeType || undefined, videoBitsPerSecond: 1_500_000, audioBitsPerSecond: 128_000 };
 
         let recorder;
-        try {
-          recorder = new MediaRecorder(state.localStream, options);
-        } catch {
+        try { recorder = new MediaRecorder(state.localStream, options); }
+        catch {
           try { recorder = new MediaRecorder(state.localStream); }
           catch { showToast("Failed to start recorder.", "error", { duration: 4500 }); return; }
         }
@@ -1409,10 +1375,7 @@
 
         state.recording.autoStopTimeout = setTimeout(() => stopRecording(), 30_000);
 
-        recorder.ondataavailable = (ev) => {
-          if (ev.data && ev.data.size > 0) state.recording.chunks.push(ev.data);
-        };
-
+        recorder.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) state.recording.chunks.push(ev.data); };
         recorder.onerror = () => showToast("Recording error occurred.", "error");
 
         recorder.onstop = async () => {
@@ -1443,17 +1406,11 @@
           setHelperLine(`Last clip: ${formatTime(elapsed)} • ${formatBytes(blob.size)}`);
         };
 
-        try {
-          recorder.start(500);
-          showToast("Recording started (max 30s).", "success", { duration: 1800 });
-        } catch {
-          state.recording.active = false;
-          setRecordingUI(false);
-          showToast("Failed to start recording.", "error");
-        }
+        try { recorder.start(500); showToast("Recording started (max 30s).", "success", { duration: 1800 }); }
+        catch { state.recording.active = false; setRecordingUI(false); showToast("Failed to start recording.", "error"); }
       }
 
-      // ---------- Controls ----------
+      // Controls
       function toggleMic() {
         if (!state.localStream) return;
         const tracks = state.localStream.getAudioTracks();
@@ -1495,24 +1452,21 @@
         updateActionButtons();
       }
 
-      // ---------- Invite link (IMPORTANT: no host=1 in invite) ----------
+      // Invite link (adds v=APP_VERSION to reduce GH Pages cache issues)
       function getInviteLink() {
         const base = location.origin + location.pathname;
         const id = state.myPeerId || "";
-        return `${base}?room=${encodeURIComponent(id)}`;
+        return `${base}?room=${encodeURIComponent(id)}&v=${encodeURIComponent(APP_VERSION)}`;
       }
-
       function openInviteModal() {
-        const link = getInviteLink();
-        inviteLinkEl.textContent = link;
+        inviteLinkEl.textContent = getInviteLink();
         inviteModalEl.classList.remove("hidden");
       }
       function closeInviteModal() { inviteModalEl.classList.add("hidden"); }
 
-      // ---------- Boot logic (host refresh fix + URL auto-update safe) ----------
+      // Role resolution (host refresh fix without host=1 parameter)
       function resolveRoleAndRoom() {
         const room = getQueryParam("room");
-        const hostFlag = getQueryParam("host");
         const rememberedRole = sessionStorage.getItem("gc_role");
 
         if (!room) {
@@ -1522,17 +1476,66 @@
           return;
         }
 
-        // If host had previously created the room in this tab/session, keep host role on refresh
-        if (hostFlag === "1" || rememberedRole === "host") {
+        // Only the same tab/session that previously created the room stays host on refresh
+        if (rememberedRole === "host") {
           state.role = "host";
           state.roomIdFromUrl = room;
-          sessionStorage.setItem("gc_role", "host");
           return;
         }
 
         state.role = "guest";
         state.roomIdFromUrl = room;
         sessionStorage.setItem("gc_role", "guest");
+      }
+
+      async function startSignaling() {
+        closeSigModal();
+        destroyPeer();
+
+        setStatus("Connecting");
+        setHelperLine("Starting signaling…");
+        try {
+          const peerInit = await initPeerWithFallback();
+          state.peer = peerInit.peer;
+          state.myPeerId = peerInit.id;
+          state.signaling.cfg = peerInit.cfg;
+          updateHeaderLabels();
+          setStatus("Online");
+          setHelperLine(`Online • signaling: ${peerInit.cfg.host}${peerInit.cfg.path} • v${APP_VERSION}`);
+
+          state.peer.on("call", (call) => {
+            state.remotePeerId = call.peer;
+            updateHeaderLabels();
+            setRemoteLabel(`Incoming call from ${call.peer}`);
+            answerIncomingCall(call);
+          });
+
+          state.peer.on("connection", (conn) => setupDataConnection(conn));
+
+          state.peer.on("disconnected", () => {
+            setStatus("Disconnected");
+            setHelperLine("Disconnected from signaling. Trying to reconnect…");
+            try { state.peer.reconnect(); } catch {}
+          });
+
+          state.peer.on("close", () => {
+            setStatus("Disconnected");
+            setHelperLine("Signaling closed.");
+          });
+
+          state.peer.on("error", (err) => {
+            showToast(`Peer error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 5000 });
+          });
+
+          return true;
+        } catch (err) {
+          setStatus("Disconnected");
+          const details = `${err?.type || err?.name || "Error"}: ${err?.message || String(err || "Unknown")}`;
+          setHelperLine("Failed to connect to signaling.");
+          openSigModal(details);
+          showToast("Failed to connect to signaling server.", "error", { duration: 6000 });
+          return false;
+        }
       }
 
       async function boot() {
@@ -1542,30 +1545,15 @@
         resolveRoleAndRoom();
         updateHeaderLabels();
 
-        setStatus("Connecting");
-        setHelperLine("Starting peer…");
         setRemoteLabel("Waiting for peer…");
         showStageHint(true);
 
-        // Init Peer (with fallback)
-        let peerInit;
-        try {
-          peerInit = await initPeerWithFallback();
-        } catch (err) {
-          setStatus("Disconnected");
-          setHelperLine("Failed to connect to signaling server.");
-          showToast(`Signaling error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 6500 });
-          return;
-        }
+        const ok = await startSignaling();
+        if (!ok) return;
 
-        state.peer = peerInit.peer;
-        state.myPeerId = peerInit.id;
-        updateHeaderLabels();
-        setStatus("Online");
-
-        // If host: auto-update URL to include room + host=1 (but invite link copies without host=1)
+        // Host: auto-update URL to include room=<myPeerId> (no host flag)
         if (state.role === "host") {
-          setQueryParams({ room: state.myPeerId, host: "1" });
+          setQueryParams({ room: state.myPeerId, v: APP_VERSION });
           state.roomIdFromUrl = state.myPeerId;
           updateHeaderLabels();
           copyLinkInlineBtn.classList.remove("hidden");
@@ -1573,46 +1561,20 @@
           copyLinkInlineBtn.classList.add("hidden");
         }
 
-        // Peer events
-        state.peer.on("call", (call) => {
-          state.remotePeerId = call.peer;
-          updateHeaderLabels();
-          setRemoteLabel(`Incoming call from ${call.peer}`);
-          answerIncomingCall(call);
-        });
-
-        state.peer.on("connection", (conn) => setupDataConnection(conn));
-
-        state.peer.on("disconnected", () => {
-          setStatus("Disconnected");
-          setHelperLine("Disconnected from signaling. Trying to reconnect…");
-          try { state.peer.reconnect(); } catch {}
-        });
-
-        state.peer.on("close", () => {
-          setStatus("Disconnected");
-          setHelperLine("Peer closed.");
-        });
-
-        state.peer.on("error", (err) => {
-          showToast(`Peer error: ${err?.type || err?.message || "Unknown"}`, "error", { duration: 5000 });
-        });
-
-        // Try to init media (user can fallback if denied)
+        // media init (optional)
         try {
           await initLocalStream(true);
-          setHelperLine("Media ready.");
+          setHelperLine(`Media ready • signaling: ${state.signaling.cfg?.host || "?"}${state.signaling.cfg?.path || ""} • v${APP_VERSION}`);
         } catch {
-          // user will use Retry/Audio-only; still allow host to share link
           setHelperLine(state.role === "host"
-            ? "Share invite link. Allow permissions to enable video/audio."
-            : "Allow permissions to start the call.");
+            ? `Share invite link. Allow permissions to enable media. • v${APP_VERSION}`
+            : `Allow permissions to start the call. • v${APP_VERSION}`);
         }
 
-        // Role-specific behavior
+        // role behavior
         if (state.role === "host") {
           openInviteModal();
-          setHelperLine("Copy invite link to connect.");
+          setHelperLine(`Copy invite link to connect. • v${APP_VERSION}`);
         } else {
           if (!state.roomIdFromUrl) {
             showToast("Missing room parameter.", "error");
@@ -1639,33 +1601,24 @@
         updateToggleButtons();
       }
 
-      // ---------- Events wiring ----------
+      // Events
       openGalleryBtn.addEventListener("click", openGallery);
       closeGalleryBtn.addEventListener("click", closeGallery);
-      galleryDrawerEl.addEventListener("click", (e) => {
-        if (e.target === galleryDrawerEl) closeGallery();
-      });
-      clearGalleryBtn.addEventListener("click", () => {
-        clearGallery();
-        showToast("Gallery cleared", "success", { duration: 1600 });
-      });
+      galleryDrawerEl.addEventListener("click", (e) => { if (e.target === galleryDrawerEl) closeGallery(); });
+      clearGalleryBtn.addEventListener("click", () => { clearGallery(); showToast("Gallery cleared", "success", { duration: 1600 }); });
 
       closeLightboxBtn.addEventListener("click", closeLightbox);
-      lightboxEl.addEventListener("click", (e) => {
-        if (e.target === lightboxEl || e.target === lightboxEl.firstElementChild) closeLightbox();
-      });
+      lightboxEl.addEventListener("click", (e) => { if (e.target === lightboxEl || e.target === lightboxEl.firstElementChild) closeLightbox(); });
       downloadBtn.addEventListener("click", () => { if (lightboxItem) downloadItem(lightboxItem); });
 
       copyInviteBtn.addEventListener("click", async () => {
-        const link = getInviteLink();
-        const ok = await copyToClipboard(link);
+        const ok = await copyToClipboard(getInviteLink());
         showToast(ok ? "Link copied" : "Copy failed", ok ? "success" : "error");
       });
-      closeInviteBtn.addEventListener("click", closeInviteModal);
+      closeInviteBtn.addEventListener("click", () => inviteModalEl.classList.add("hidden"));
 
       copyLinkInlineBtn.addEventListener("click", async () => {
-        const link = getInviteLink();
-        const ok = await copyToClipboard(link);
+        const ok = await copyToClipboard(getInviteLink());
         showToast(ok ? "Link copied" : "Copy failed", ok ? "success" : "error");
       });
 
@@ -1677,10 +1630,8 @@
 
           // If guest, auto-call now
           const room = getQueryParam("room");
-          const hostFlag = getQueryParam("host");
-          const isGuest = (sessionStorage.getItem("gc_role") === "guest") && hostFlag !== "1";
-
-          if (room && isGuest) {
+          const rememberedRole = sessionStorage.getItem("gc_role");
+          if (room && rememberedRole === "guest") {
             state.role = "guest";
             state.roomIdFromUrl = room;
             updateHeaderLabels();
@@ -1698,10 +1649,8 @@
           updateToggleButtons();
 
           const room = getQueryParam("room");
-          const hostFlag = getQueryParam("host");
-          const isGuest = (sessionStorage.getItem("gc_role") === "guest") && hostFlag !== "1";
-
-          if (room && isGuest) {
+          const rememberedRole = sessionStorage.getItem("gc_role");
+          if (room && rememberedRole === "guest") {
             state.role = "guest";
             state.roomIdFromUrl = room;
             updateHeaderLabels();
@@ -1712,50 +1661,61 @@
         } catch {}
       });
 
-      closePermBtn.addEventListener("click", () => closePermModal());
+      closePermBtn.addEventListener("click", closePermModal);
+
+      retrySigBtn.addEventListener("click", async () => {
+        await startSignaling();
+        // If signaling becomes online, continue boot steps (lightweight)
+        if (state.peer && state.myPeerId) {
+          closeSigModal();
+          // Host auto-update URL only if host role (based on session + presence)
+          if (sessionStorage.getItem("gc_role") === "host") {
+            state.role = "host";
+            setQueryParams({ room: state.myPeerId, v: APP_VERSION });
+            state.roomIdFromUrl = state.myPeerId;
+            updateHeaderLabels();
+            copyLinkInlineBtn.classList.remove("hidden");
+            openInviteModal();
+          } else {
+            // If guest, keep role and allow normal flow
+            state.role = "guest";
+            updateHeaderLabels();
+          }
+        }
+      });
+      closeSigBtn.addEventListener("click", closeSigModal);
 
       toggleMicBtn.addEventListener("click", toggleMic);
       toggleCamBtn.addEventListener("click", toggleCamera);
       snapBtn.addEventListener("click", handleSnap);
-
-      recordBtn.addEventListener("click", () => {
-        if (state.recording.active) stopRecording();
-        else startRecording();
-      });
-
+      recordBtn.addEventListener("click", () => { state.recording.active ? stopRecording() : startRecording(); });
       endBtn.addEventListener("click", endCall);
 
-      tapToPlayBtn.addEventListener("click", async () => {
-        tapToPlayOverlayEl.classList.add("hidden");
-        tryPlayRemote();
-      });
+      tapToPlayBtn.addEventListener("click", async () => { tapToPlayOverlayEl.classList.add("hidden"); tryPlayRemote(); });
 
-      // Keyboard shortcuts
+      // Keyboard
       window.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
           if (!lightboxEl.classList.contains("hidden")) closeLightbox();
           else if (!inviteModalEl.classList.contains("hidden")) closeInviteModal();
           else if (!permModalEl.classList.contains("hidden")) closePermModal();
+          else if (!sigModalEl.classList.contains("hidden")) closeSigModal();
           else closeGallery();
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "g") {
-          e.preventDefault();
-          openGallery();
         }
       });
 
-      // Re-render lucide icons on dynamic changes
+      // Icons refresh
       const mo = new MutationObserver(() => lucide.createIcons());
       mo.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["data-lucide"] });
 
-      // ---------- Start ----------
+      // Start
       boot().catch((e) => {
         setStatus("Disconnected");
         setHelperLine("App failed to start.");
         showToast(`Startup error: ${e?.message || "Unknown"}`, "error", { duration: 6500 });
       });
 
-      // Keep action buttons updated if connection changes
+      // Keep action buttons updated as connections open/close
       setInterval(() => updateActionButtons(), 700);
     })();
   </script>
